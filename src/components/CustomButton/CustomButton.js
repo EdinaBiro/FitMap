@@ -21,7 +21,7 @@ const CustomButton = ({onPress,text,type="PRIMARY", bgColor, fgColor}) => {
   </Pressable>
   );
 };
-
+//
 const styles = StyleSheet.create({
     constainer: {
       width: '100%',
