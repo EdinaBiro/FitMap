@@ -1,40 +1,35 @@
 import { StyleSheet, Text, View, Image, useWindowDimensions, ScrollView} from 'react-native'
-import Logo from '../../assets/images/1.png';
+import Logo from '../../../assets/images/logo.png';
 import React from 'react';
-import CustomInput from '../components/CustomInput/CustomInput';
+import CustomInput from '../../components/CustomInput/CustomInput';
 import {useState} from 'react';
-import CustomButton from '../components/CustomButton/CustomButton';
-
+import CustomButton from '../../components/CustomButton/CustomButton';
+import { useNavigation } from 'expo-router';
+import { TextInput } from 'react-native-gesture-handler';
+import {useForm,Controller} from 'react-hook-form';
 
 const LoginScreen = () => {
 
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-
     const {height} = useWindowDimensions();
+    const navigation = useNavigation();
+
+    const {control,handleSubmit,formState: {errors}} = useForm();
+  
 
     const onLoginPressed = () => {
-      console.warn("Log in");
+      //validate user
+
+      navigation.navigate('Home');
     }
 
     const onForgotPasswordPressed = () => {
-      console.warn("Forgot password");
-    }
 
-    const onLoginApple = () => {
-      console.warn("Apple");
-    }
-
-    const onLoginFacebook =() => {
-      console.warn("Facebook");
-    }
-
-    const onLoginGoogle = () => {
-      console.warn("Google");
+      navigation.navigate("ForgotPasswordScreen");
     }
 
     const onSignUpPressed = () => {
-      console.warn("Sign up");
+      navigation.navigate("SignUpScreen");
+
     }
 
   return (
@@ -45,49 +40,31 @@ const LoginScreen = () => {
       resizeMode="contain"
       />
 
+
       <CustomInput 
+      name="username" 
       placeholder="Username" 
-      value={username} 
-      setValue={setUsername}
-    
-      />
+      control={control} 
+      rules={{required: 'Username is required'}}
+       />
 
       <CustomInput 
+      name="password"
       placeholder="Password" 
-      value={password} 
-      setValue={setPassword}
       secureTextEntry={true}
+      control={control}
+      rules={{required: 'Password is required',minLength: {value:3, message:'Password should be minimum ${value} characters long',magLength:  {value:15, message:'Password should be maximum ${value} characters long'  }}}}
       />
 
-      <CustomButton text="Log in" onPress={onLoginPressed}/>
+
+      <CustomButton text="Log in" onPress={handleSubmit(onLoginPressed)}/>
 
       <CustomButton 
       text="Forgot Password" 
       onPress={onForgotPasswordPressed}
       type="TERTIARY"
       />
-
-    <CustomButton 
-    text="Log in with Facebook" 
-    onPress={onLoginFacebook}
-    bgColor="#E7EAF4"
-    fgColor="#4764A9"
-    />
-
-    <CustomButton 
-    text="Log in with Google" 
-    onPress={onLoginGoogle}
-    bgColor="#FAE9EA"
-    fgColor="#DD4D44"
-    />
-
-    <CustomButton 
-    text="Log in with Apple" 
-    onPress={onLoginApple}
-    bgColor="#e3e3e3"
-    fgColor="#363636"
-    />
-
+  
       <CustomButton 
       text="Don't have an account? Create one" 
       onPress={onSignUpPressed}
@@ -119,5 +96,3 @@ const styles = StyleSheet.create({
 
 
 export default LoginScreen;
-
-//

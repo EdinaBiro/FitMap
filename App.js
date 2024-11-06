@@ -1,15 +1,11 @@
 import { SafeAreaView, StyleSheet, Text, useColorScheme, View , ScrollView} from 'react-native';
 import React from 'react';
-import {SignUpScreen} from "./src/screens/SignUpScreen";
-import LoginScreen from './src/screens/LoginScreen';
-
-
-
+import Navigation from './src/navigation';
 
 const App = () => {
   return (
     <SafeAreaView style={styles.root}>
-      <LoginScreen />
+      <Navigation />
 
     </SafeAreaView>
     
@@ -27,5 +23,3 @@ const styles = StyleSheet.create({
 });
 
 export default App;
-
-//
