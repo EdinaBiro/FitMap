@@ -1,12 +1,13 @@
 import { StyleSheet, Text, View, Image, useWindowDimensions, ScrollView} from 'react-native'
 import Logo from '../../../assets/images/logo.png';
 import React from 'react';
-import CustomInput from '../../components/CustomInput/CustomInput';
+import CustomInput from '../../components/CustomInput';
 import {useState} from 'react';
 import CustomButton from '../../components/CustomButton/CustomButton';
-import { useNavigation } from 'expo-router';
+//import { useNavigation } from 'expo-router';
 import { TextInput } from 'react-native-gesture-handler';
 import {useForm,Controller} from 'react-hook-form';
+import {useNavigation} from "@react-navigation/native"
 
 const LoginScreen = () => {
 
@@ -53,7 +54,7 @@ const LoginScreen = () => {
       placeholder="Password" 
       secureTextEntry={true}
       control={control}
-      rules={{required: 'Password is required',minLength: {value:3, message:'Password should be minimum ${value} characters long',magLength:  {value:15, message:'Password should be maximum ${value} characters long'  }}}}
+      rules={{required: 'Password is required',minLength: {value:3, message:'Password should be minimum ${value} characters long',maxLength:  {value:15, message:'Password should be maximum ${value} characters long'  }}}}
       />
 
 
