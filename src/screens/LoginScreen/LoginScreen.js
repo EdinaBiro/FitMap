@@ -17,10 +17,11 @@ const LoginScreen = () => {
     const {control,handleSubmit,formState: {errors}} = useForm();
   
 
+
     const onLoginPressed = () => {
       //validate user
 
-      navigation.navigate('Home');
+      navigation.navigate('Calendar');
     }
 
     const onForgotPasswordPressed = () => {
