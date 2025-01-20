@@ -9,8 +9,11 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen/ForgotPassword
 import NewPasswordScreen from '../screens/NewPasswordScreen/NewPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import SCREENS from '../screens';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
 const Navigation = () => {
   return (
@@ -28,5 +31,32 @@ const Navigation = () => {
     </NavigationContainer>
   );
 };
+
+const TabNavigator = () => {
+  return <Tab.Navigator initialRouteName ={SCREENS.HOME} >
+    <Tab.Screen 
+    name = {SCREENS.HOME} 
+    component={HomeScreen} 
+    options={{title: 'Home', tabBarIcon: ({focused}) => (<Image source={IMAGES.HOME} style={{height: 30, width: 30}} />)}}> 
+
+    </Tab.Screen>
+
+  <Tab.Screen 
+  name = {SCREENS.PROFILE} 
+  component={ProfileScreen} 
+  options={{title: 'Profile', tabBarIcon: ({focused}) => (<Image source={IMAGES.PROFILE} style={{height: 30, width: 30}} />)}}> 
+
+  </Tab.Screen>
+
+  {/* <Tab.Screen 
+  name = {SCREENS.WORKOUT} 
+  component={WorkoutScreen} 
+  options={{title: 'Workout', tabBarIcon: ({focused}) => (<Image source={IMAGES.WORKOUT} style={{height: 30, width: 30}} />)}}> 
+
+  </Tab.Screen> */}
+
+  </Tab.Navigator>
+}
+
 
 export default Navigation;
