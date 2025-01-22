@@ -5,17 +5,23 @@ import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
 import { useNavigation } from 'expo-router';
 import {useForm} from 'react-hook-form';
+import {useRouter} from 'expo-router';
 
 
 const ForgotPasswordScreen= () => {
 
+    const [email, setEmail] = useState('');
+
     const {control,handleSubmit} = useForm();
     const navigation = useNavigation();
+
+    const router = useRouter();
 
     const onSendPressed = (data) => {
       console.warn(data);
       navigation.navigate("NewPasswordScreen");
     }
+    
 
     const onSignInPressed = () => {
       navigation.navigate("LoginScreen");
@@ -28,16 +34,15 @@ const ForgotPasswordScreen= () => {
      <Text style={styles.title}>Reset your password</Text>
 
       <CustomInput 
-      name = "username"
+      name = "Email"
       control={control}
-      placeholder="UserName" 
+      placeholder="Email" 
       rules={{
-          required: 'Username is required'
+          required: 'Email is required'
       }}
       
       /> 
 
-    
 
       <CustomButton text="Send" onPress={handleSubmit(onSendPressed)}/>
     

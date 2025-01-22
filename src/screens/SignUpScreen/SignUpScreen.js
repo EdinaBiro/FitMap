@@ -42,7 +42,7 @@ const SignUpScreen = () => {
       name="username"
       control={control}
       placeholder="Username"  
-      rules=   {{required: 'Username is requiresd', minLength: {value: 3, message: 'Username should be at least 3 characters long', maxLength: {value:24 , message: 'Ysername should be at least 24 characters long'},}}}
+      rules=   {{required: 'Username is required', minLength: {value: 3, message: 'Username should be at least 3 characters long', maxLength: {value:24 , message: 'Username should be at least 24 characters long'},}}}
       />
 
       <CustomInput 
@@ -57,7 +57,7 @@ const SignUpScreen = () => {
       placeholder="Password" 
       control={control}
       secureTextEntry
-      rules={{required: 'Password is required', minLength: {value: 8, message: 'Username should be at least 8 characters long', maxLength: {value:24 , message: 'Password should be at least 24 characters long'},}}}
+      rules={{required: 'Password is required', minLength: {value: 8, message: 'Password should be at least 8 characters long', maxLength: {value:24 , message: 'Password should be at least 24 characters long'},}}}
       />
 
       <CustomInput 

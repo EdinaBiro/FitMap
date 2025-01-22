@@ -12,10 +12,12 @@ const NewPasswordScreen= () => {
   
     const {control,handleSubmit} = useState();
     const navigation = useNavigation();
+    const [code, setCode] = useState('');
+    const [newPassword, setNewPassword] = useState('');
 
     const onSubmitPressed = (data) => {
       console.warn(data);
-      navigation.navigate('Home');
+      navigation.navigate('CalendarScreen');
     }
 
     const onSignInPressed = () => {
