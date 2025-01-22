@@ -4,10 +4,10 @@ import React from 'react';
 import CustomInput from '../../components/CustomInput';
 import {useState} from 'react';
 import CustomButton from '../../components/CustomButton/CustomButton';
-//import { useNavigation } from 'expo-router';
 import { TextInput } from 'react-native-gesture-handler';
 import {useForm,Controller} from 'react-hook-form';
-import {useNavigation} from "@react-navigation/native"
+import {useNavigation} from "@react-navigation/native";
+import {useRouter} from 'expo-router';
 
 const LoginScreen = () => {
 
@@ -17,11 +17,12 @@ const LoginScreen = () => {
     const {control,handleSubmit,formState: {errors}} = useForm();
   
 
+    const router = useRouter();
 
     const onLoginPressed = () => {
       //validate user
 
-      navigation.navigate('Calendar');
+      navigation.navigate('CalendarScreen');
     }
 
     const onForgotPasswordPressed = () => {
@@ -33,6 +34,15 @@ const LoginScreen = () => {
       navigation.navigate("SignUpScreen");
 
     }
+
+    const onSignInFacebook = () => {
+      console.warn('onSignInFacebook');
+    }
+
+    const onSignInGoogle = () => {
+      console.warn('onSignInGoogle');
+    }
+
 
   return (
     <ScrollView showsHorizontalScrollIndicator={false}>
@@ -67,6 +77,22 @@ const LoginScreen = () => {
       type="TERTIARY"
       />
   
+      <CustomButton
+        text = "Sign up with Facebook"
+        onPress={onSignInFacebook}
+        bgColor="#E7EAF4"
+        fgColor="#4765A9"
+
+      />
+      <CustomButton
+        text = "Sign up with Google"
+        onPress={onSignInGoogle}
+        bgColor="#FAE9EA"
+        fgColor="DD4D44"
+
+      />
+
+
       <CustomButton 
       text="Don't have an account? Create one" 
       onPress={onSignUpPressed}
