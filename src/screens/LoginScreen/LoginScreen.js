@@ -6,8 +6,7 @@ import {useState} from 'react';
 import CustomButton from '../../components/CustomButton/CustomButton';
 import { TextInput } from 'react-native-gesture-handler';
 import {useForm,Controller} from 'react-hook-form';
-import {useNavigation} from "@react-navigation/native";
-import {useRouter} from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen = () => {
 
@@ -16,8 +15,6 @@ const LoginScreen = () => {
 
     const {control,handleSubmit,formState: {errors}} = useForm();
   
-
-    const router = useRouter();
 
     const onLoginPressed = () => {
       //validate user
@@ -73,7 +70,7 @@ const LoginScreen = () => {
 
       <CustomButton 
       text="Forgot Password" 
-      onPress={onForgotPasswordPressed}
+      onPress={ () => navigation.navigate('ForgotPasswordScreen')}
       type="TERTIARY"
       />
   

@@ -3,9 +3,9 @@ import React from 'react';
 import CustomInput from '../../components/CustomInput';
 import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
-import { useNavigation } from 'expo-router';
 import {useForm} from 'react-hook-form';
 import {useRouter} from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 
 
 const ForgotPasswordScreen= () => {
@@ -15,7 +15,7 @@ const ForgotPasswordScreen= () => {
     const {control,handleSubmit} = useForm();
     const navigation = useNavigation();
 
-    const router = useRouter();
+
 
     const onSendPressed = (data) => {
       console.warn(data);

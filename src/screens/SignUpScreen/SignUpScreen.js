@@ -4,7 +4,8 @@ import CustomInput from '../../components/CustomInput';
 import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
 import SocialSignInButtons from '../../components/SocialSignInButtons';
-import { useNavigation } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+
 import { useForm } from 'react-hook-form';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
