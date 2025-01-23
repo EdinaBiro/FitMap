@@ -35,31 +35,31 @@ const Navigation = () => {
   );
 };
 
-// const TabNavigator = () => {
-//   return <Tab.Navigator initialRouteName ={SCREENS.HOME} >
-//     <Tab.Screen 
-//     name = {SCREENS.HOME} 
-//     component={HomeScreen} 
-//     options={{title: 'Home', tabBarIcon: ({focused}) => (<Image source={IMAGES.HOME} style={{height: 30, width: 30}} />)}}> 
+const TabNavigator = () => {
+  return <Tab.Navigator initialRouteName ={SCREENS.HOME} >
+    <Tab.Screen 
+    name = {SCREENS.HOME} 
+    component={HomeScreen} 
+    options={{title: 'Home', tabBarIcon: ({focused}) => (<Image source={IMAGES.HOME} style={{height: 30, width: 30}} />)}}> 
 
-//     </Tab.Screen>
+    </Tab.Screen>
 
-//   <Tab.Screen 
-//   name = {SCREENS.PROFILE} 
-//   component={ProfileScreen} 
-//   options={{title: 'Profile', tabBarIcon: ({focused}) => (<Image source={IMAGES.PROFILE} style={{height: 30, width: 30}} />)}}> 
+  <Tab.Screen 
+  name = {SCREENS.PROFILE} 
+  component={ProfileScreen} 
+  options={{title: 'Profile', tabBarIcon: ({focused}) => (<Image source={IMAGES.PROFILE} style={{height: 30, width: 30}} />)}}> 
 
-//   </Tab.Screen>
+  </Tab.Screen>
 
-//   {/* <Tab.Screen 
-//   name = {SCREENS.WORKOUT} 
-//   component={WorkoutScreen} 
-//   options={{title: 'Workout', tabBarIcon: ({focused}) => (<Image source={IMAGES.WORKOUT} style={{height: 30, width: 30}} />)}}> 
+  <Tab.Screen 
+  name = {SCREENS.WORKOUT} 
+  component={WorkoutScreen} 
+  options={{title: 'Workout', tabBarIcon: ({focused}) => (<Image source={IMAGES.WORKOUT} style={{height: 30, width: 30}} />)}}> 
 
-//   </Tab.Screen> */}
+  </Tab.Screen>
 
-//   </Tab.Navigator>
-//}
+  </Tab.Navigator>
+}
 
 
 export default Navigation;
