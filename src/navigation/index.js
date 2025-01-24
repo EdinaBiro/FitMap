@@ -9,13 +9,12 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen/ForgotPassword
 import NewPasswordScreen from '../screens/NewPasswordScreen/NewPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import SCREENS from '../screens';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import BottomNavigation from '../bottomNav/BottomNavigation';
+import DrawerNavigation from '../drawerNav/DrawerNavigation';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 
 
 const Stack = createNativeStackNavigator();
-// const Tab = createBottomTabNavigator();
 
 const Navigation = () => {
   return (
@@ -28,6 +27,8 @@ const Navigation = () => {
         <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen} />
         <Stack.Screen name="HomeScreen" component={HomeScreen} />
         <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
+        <Stack.Screen name ="BottomNavigation" component={BottomNavigation}/>
+        <Stack.Screen name="DrawerNavigation" component={DrawerNavigation}/>
 
       </Stack.Navigator>
    </NavigationContainer>
@@ -35,31 +36,6 @@ const Navigation = () => {
   );
 };
 
-const TabNavigator = () => {
-  return <Tab.Navigator initialRouteName ={SCREENS.HOME} >
-    <Tab.Screen 
-    name = {SCREENS.HOME} 
-    component={HomeScreen} 
-    options={{title: 'Home', tabBarIcon: ({focused}) => (<Image source={IMAGES.HOME} style={{height: 30, width: 30}} />)}}> 
-
-    </Tab.Screen>
-
-  <Tab.Screen 
-  name = {SCREENS.PROFILE} 
-  component={ProfileScreen} 
-  options={{title: 'Profile', tabBarIcon: ({focused}) => (<Image source={IMAGES.PROFILE} style={{height: 30, width: 30}} />)}}> 
-
-  </Tab.Screen>
-
-  <Tab.Screen 
-  name = {SCREENS.WORKOUT} 
-  component={WorkoutScreen} 
-  options={{title: 'Workout', tabBarIcon: ({focused}) => (<Image source={IMAGES.WORKOUT} style={{height: 30, width: 30}} />)}}> 
-
-  </Tab.Screen>
-
-  </Tab.Navigator>
-}
 
 
 export default Navigation;

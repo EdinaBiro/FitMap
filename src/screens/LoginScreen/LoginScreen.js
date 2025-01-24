@@ -19,7 +19,12 @@ const LoginScreen = () => {
     const onLoginPressed = () => {
       //validate user
 
-      navigation.navigate('HomeScreen');
+      navigation.navigate('CalendarScreen');
+      handleLogin();
+    }
+
+    const handleLogin = () => {
+      navigation.replace('BottomNavigation');
     }
 
     const onForgotPasswordPressed = () => {
