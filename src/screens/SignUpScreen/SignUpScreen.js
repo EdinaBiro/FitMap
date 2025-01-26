@@ -18,7 +18,7 @@ const SignUpScreen = () => {
     const navigation = useNavigation();
 
     const onRegisterPressed = () => {
-      navigation.navigate("ConfirmEmailScreen");
+      navigation.navigate("LoginScreen");
     }
 
     const onSignInPressed = () => {

@@ -3,7 +3,7 @@ import React from 'react';
 import CustomInput from '../../components/CustomInput';
 import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
-import { useNavigation } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import {useForm} from 'react-hook-form';
 
 
@@ -15,7 +15,7 @@ const ConfirmEmailScreen = () => {
 
     const onConfirmPressed = (data) => {
       console.warn(data);
-      navigation.navigate("Home");
+      navigation.navigate("HomeScreen");
     }
 
     const onSignInPressed = () => {
@@ -41,7 +41,7 @@ const ConfirmEmailScreen = () => {
 
       />
 
-      <CustomButton text="Confirm" onPress={handeSubmit(onConfirmPressed)}/>
+      <CustomButton text="Confirm" onPress={handleSubmit(onConfirmPressed)}/>
 
       <CustomButton 
       text="Resend code" 

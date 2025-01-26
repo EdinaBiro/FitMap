@@ -1,51 +1,60 @@
 {
+  "splash": {
+    "image": "./assets/images/logo.png"
+  },
   "expo": {
     "name": "FitMap",
     "slug": "FitMap",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/images/logo.png",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "image": "./assets/images/logo.png"
     },
+    "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.galaxies.firebase"
+      "bundleIdentifier": "com.galaxies.firebase",
+      "googleServicesFile": "./googleService-Info.plist"
     },
+   
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package" : "com.galaxies.firebase"
+      "package" : "com.galaxies.firebase",
+      "googleServicesFile": "./google-services.json"
+      
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
-      "expo-build-properties",{
-        "ios": {
-          "useFramework": "static"
-        }
-      }
-    ],
-    [
-        "expo-calendar",
+        "react-native-fbsdk-next",
         {
-          "calendarPermission": "The app needs to access your calendar."
+          "appID": "1810777129689309",
+          "clientToken": "dd762e6aa0fe799ffebb8cbab0aba88c",
+          "displayName": "FitMap",
+          "scheme": "fb1810777129689309",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true,
+          "iosUserTrackingPermission": "This identifier will be used to deliver personalized ads to you."
         }
-    ],
-
-      "expo-router",
+      ],
       "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      "@react-native-firebase/auth",
+      "@react-native-firebase/crashlytics",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ]
+
   }
 }
