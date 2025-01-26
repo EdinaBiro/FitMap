@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1065715922957",
+    "project_id": "fitmap-84de1",
+    "storage_bucket": "fitmap-84de1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1065715922957:android:9c08533d7e8de817d67d44",
+        "android_client_info": {
+          "package_name": "com.galaxies.firebase"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMBGHsgJsKXPJxX1LySnNgkJLWZHxImck"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

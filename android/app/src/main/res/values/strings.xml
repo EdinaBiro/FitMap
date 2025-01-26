@@ -1,0 +1,6 @@
+<resources>
+  <string name="app_name">FitMap</string>
+  <string name="facebook_app_id">1810777129689309</string>
+  <string name="facebook_client_token">dd762e6aa0fe799ffebb8cbab0aba88c</string>
+  <string name="fb_login_protocol_scheme">fb1810777129689309</string>
+</resources>

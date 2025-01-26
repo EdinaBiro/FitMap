@@ -11,8 +11,6 @@ import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import DrawerNavigation from '../drawerNav/DrawerNavigation';
-import { createDrawerNavigator } from '@react-navigation/drawer';
-
 
 const Stack = createNativeStackNavigator();
 
