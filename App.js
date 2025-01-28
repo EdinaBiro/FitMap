@@ -3,12 +3,16 @@ import React from 'react';
 import Navigation from './src/navigation';
 import { AppRegistry } from 'react-native';
 import { name as appName } from './app.json';
+import BottomNavigation from './src/bottomNav/BottomNavigation';
+import { NavigationContainer } from '@react-navigation/native';
+import DrawerNavigation from './src/drawerNav/DrawerNavigation';
+
 const App = () => {
   return (
-    <SafeAreaView style={styles.root}>
-      <Navigation />
-
-    </SafeAreaView>
+   <NavigationContainer>
+      <BottomNavigation />
+      {/* <DrawerNavigation /> */}
+   </NavigationContainer>
     
   );
 };

@@ -11,13 +11,14 @@ import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import DrawerNavigation from '../drawerNav/DrawerNavigation';
+import WorkoutScreen from '../screens/WorkoutScreen/WorkoutScreen';
 
 const Stack = createNativeStackNavigator();
 
 const Navigation = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Navigator screenOptions={{headerShown: false}} initialRouteName='Main'>
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
         <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
         <Stack.Screen name="ConfirmEmailScreen" component={ConfirmEmailScreen} />
@@ -26,7 +27,8 @@ const Navigation = () => {
         <Stack.Screen name="HomeScreen" component={HomeScreen} />
         <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
         <Stack.Screen name ="BottomNavigation" component={BottomNavigation}/>
-        <Stack.Screen name="DrawerNavigation" component={DrawerNavigation}/>
+        <Stack.Screen name="Main" component={DrawerNavigation}/>
+        <Stack.Screen name="WorkoutScreen" component={WorkoutScreen} />
 
       </Stack.Navigator>
    </NavigationContainer>
