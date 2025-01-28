@@ -8,6 +8,8 @@ const workouts = [
     {name: 'Hiking', image: require('../../../assets/images/hiking.jpg')},
 ];
 
+const { width} = Dimensions.get('window');
+
 const WorkoutScreen = () => {
   return (
     <View style={styles.container}>

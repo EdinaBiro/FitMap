@@ -1,11 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View,Image} from 'react-native';
 import React from 'react';
 import { createDrawerNavigator, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
-import {IonIcons} from '@expo/vector-icons';
+import {Ionicons} from '@expo/vector-icons';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import HomeScreen from '../screens/HomeScreen';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ImageStore } from 'react-native';
 import SettingsScreen from '../screens/SettingsScreen/SettingsScreen';
 
 
@@ -71,7 +70,7 @@ const DrawerNavigation = () => {
             title: "Home",
             headerShadowVisible: false,
             drawerIcon: ()=> (
-                <IonIcons name="home-outline" size={24} />
+                <Ionicons name="home-outline" size={24} />
             )
         }}
         component={HomeScreen}>
@@ -85,12 +84,23 @@ const DrawerNavigation = () => {
             title: "Settings",
             headerShadowVisible: false,
             drawerIcon: ()=> (
-                <IonIcons name="settings-outline" size={24} />
+                <Ionicons name="settings-outline" size={24} />
             )
         }}
         component={SettingsScreen}>
 
         </Drawer.Screen>
+    <Drawer.Screen 
+        name="BottomNavigation"
+        component={BottomNavigation}
+        options={{
+            drawerLabel: "Bottom Navigation",
+            title: "Bottom Navigation",
+            headerShadowVisible: false,
+            drawerIcon: () => <Ionicons name="list-outline" size={24} />
+        }}
+    />
+
 
    </Drawer.Navigator>
   )

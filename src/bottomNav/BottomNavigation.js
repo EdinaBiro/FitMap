@@ -7,16 +7,75 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import HomeScreen from '../screens/HomeScreen/HomeScreen'; 
 import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
+import WorkoutScreen from '../screens/WorkoutScreen/WorkoutScreen';
+import { Platform } from 'react-native';
 
 const TabArray = [
-    {route: 'Screen', label:'HomeScreen', type: 'Ionicons', avtiveIcon: 'home', inActiveIcon: 'home-outline', component: HomeScreen},
+    {route: 'HomeScreen', label:'HomeScreen', type: 'Ionicons', avtiveIcon: 'home', inActiveIcon: 'home-outline', component: HomeScreen},
     {route: 'ProfileScreen', label: 'ProfileScreen', type: 'Ionicons', activeIcon: 'person', inActiveIcon: 'person-outline', component: ProfileScreen },
+    {route: 'WorkoutScreen', label: 'WorkoutScreen', type: 'Ionicons', activeIcon: 'add', inActiveIcon: 'add-outline', component: WorkoutScreen},
     {route: 'CalendarScreen', label: 'CalendarScreen', type: 'Ionicons', activeIcon: 'calendar', inActiveIcon: 'calendar-outline', component: CalendarScreen },
+   
 
 ]
 
 const Tab = createBottomTabNavigator();
 
+const screenOptions = {
+    tabBarShowLabel: false,
+    headerShow: false,
+    tabBarStyle: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        left: 0,
+        elevation: 0,
+        height: Platform.OS === "ios" ? 90 : 60,
+        backgroundColor: "#ffffff",
+    },
+};
+
+// const BottomNavigation = () => {
+//     return(
+//         <Tab.Navigator screenOptions={screenOptions}>
+//             <Tab.Screen
+//                 name="DrawerHome"
+//                 component={HomeScreen}
+//                 options={{
+//                     tabBarIcon: ({focused}) => {
+//                         return(
+//                             <Image
+//                             source={focused ? icons.home : icons.homeOutline}
+//                             resizeMode="contain"
+//                             style={{
+//                                 height: 24,
+//                                 width: 24,
+//                                 tintColor: focused ? "#ffffff" : "#000000",
+//                             }}
+//                             />
+//                         );
+//                     },
+//                 }}
+//                 >
+//                      {
+//             TabArray.map((item, index) => {
+//             return (
+//                 <Tab.Screen 
+//                 name = {item.route} 
+//                 component={item.component} 
+//                 key={index}
+//                 options ={{
+//                     tabBarShowLabel: false,
+//                     tabBarButton: (props) => <TabButton {...props} item ={item}/>
+//                 }}
+//                 />
+//             )
+//         })}
+
+//             </Tab.Screen>
+//         </Tab.Navigator>
+//     )
+// }
 
 
 const TabButton = (props) => {
@@ -32,16 +91,18 @@ const TabButton = (props) => {
         }
     }, [focused]);
 
+    const isWorkoutScreen = item.route === 'WorkoutScreen';
+
     return (
         <TouchableOpacity 
             onPress ={ onPress}
             activeOpacity={1}
-            style={styles.container}>
+            style={ isWorkoutScreen ? styles.plusButtonContainer : styles.container}>
                 <Animatable.View
                     ref={viewRef}
-                    //animation="zoomIn"
-                    //duration={1000}
-                    style={styles.container}>
+                    animation="zoomIn"
+                    duration={1000}
+                    style={isWorkoutScreen ? styles.plusButton : styles.container}>
                      <Icon type ={item.type}  
                         name={focused ? item.activeIcon : item.inActiveIcon}  
                         color={focused ? Colors.primary : Colors.primaryLite}
@@ -69,8 +130,11 @@ const BottomNavigation = () => {
         {
             TabArray.map((item, index) => {
             return (
-                <Tab.Screen name = {item.route} component={item.component} 
-                 options ={{
+                <Tab.Screen 
+                name = {item.route} 
+                component={item.component} 
+                key={index}
+                options ={{
                     tabBarShowLabel: false,
                     tabBarButton: (props) => <TabButton {...props} item ={item}/>
                 }}
@@ -88,7 +152,27 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    }
+    },
+    plusButtonContainer: {
+        position: 'absolute',
+        bottom: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        
+    },
+    plusButton: {
+        width: 70,
+        height: 70,
+        //top: -20,
+        borderRadius: 35,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderColor: '#FFA500',
+        backgroundColor: '#FFA500',
+
+    },
+
 
 });
 
