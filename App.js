@@ -10,8 +10,8 @@ import DrawerNavigation from './src/drawerNav/DrawerNavigation';
 const App = () => {
   return (
    <NavigationContainer>
-      <BottomNavigation />
-      {/* <DrawerNavigation /> */}
+      {/* <BottomNavigation /> */}
+      <DrawerNavigation />
    </NavigationContainer>
     
   );

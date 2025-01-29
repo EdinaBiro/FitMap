@@ -11,7 +11,7 @@ import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import DrawerNavigation from '../drawerNav/DrawerNavigation';
-import WorkoutScreen from '../screens/WorkoutScreen/WorkoutScreen';
+import WorkoutScreen from '../screens/Workout/WorkoutScreen/WorkoutScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,8 +26,8 @@ const Navigation = () => {
         <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen} />
         <Stack.Screen name="HomeScreen" component={HomeScreen} />
         <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
-        <Stack.Screen name ="BottomNavigation" component={BottomNavigation}/>
-        <Stack.Screen name="Main" component={DrawerNavigation}/>
+        <Stack.Screen name ="Main" component={BottomNavigation}/>
+        <Stack.Screen name="DrawerNavigation" component={DrawerNavigation}/>
         <Stack.Screen name="WorkoutScreen" component={WorkoutScreen} />
 
       </Stack.Navigator>
