@@ -7,15 +7,17 @@ import CustomButton from '../../components/CustomButton/CustomButton';
 import { TextInput } from 'react-native-gesture-handler';
 import {useForm,Controller} from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
-// import {auth} from '../../Firebase/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import auth from '@react-native-firebase/auth';
 import { AuthenticationToken,LoginManager, AccessToken } from 'react-native-fbsdk-next';
+import { signInWithPopup } from 'firebase/auth';
+import { provider} from '../../Firebase/firebase'; 
 
 const LoginScreen = () => {
 
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState();
+
 
   // Handle user state changes
   function onAuthStateChanged(user) {
@@ -121,6 +123,35 @@ const LoginScreen = () => {
       console.warn('onSignInGoogle');
     }
 
+    function onGoogleButtonPress() {
+      signInWithPopup(auth, provider)
+  .then((result) => {
+    // This gives you a Google Access Token. You can use it to access the Google API.
+    // const credential = GoogleAuthProvider.credentialFromResult(result);
+    // const token = credential.accessToken;
+    // The signed-in user info.
+    const user = result.user;
+
+    //name = user.displayName
+    //email = user.email
+    //photo = user.photoURL
+
+    alert(user.displayName);
+    // IdP data available using getAdditionalUserInfo(result)
+    // ...
+  }).catch((error) => {
+    // Handle Errors here.
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    // The email of the user's account used.
+    const email = error.customData.email;
+    // The AuthCredential type that was used.
+    const credential = GoogleAuthProvider.credentialFromError(error);
+
+    console.log(errorMessage);
+    // ...
+  });
+    }
     async function onFacebookButtonPressAndroid() {
       // Attempt login with permissions
       const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);

@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react'; // Hozzáadtam az useState importot
+import React, { useEffect, useState, useCallback } from 'react'; 
 import { StyleSheet, View, Text, Button, Platform,  Modal, TextInput, Image, TouchableOpacity} from 'react-native';
 import * as ExpoCalendar from 'expo-calendar';
 import { Calendar } from 'react-native-calendars';
 import * as ImagePicker from 'expo-image-picker';
+import { useNavigation } from '@react-navigation/native';
 
 const CalendarScreen = () => {
 
@@ -11,6 +12,8 @@ const CalendarScreen = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [notes, setNotes] = useState({});
     const [images, setImages] = useState({});
+    const navigation = useNavigation();
+
 
     //datum kivalasztasakor modal megjelenitese
     const onDayPress = (day) => {
@@ -37,7 +40,8 @@ const CalendarScreen = () => {
         }
     };
 
-
+ 
+    
     return (
         <View style={styles.container}>
             <Calendar style={{
@@ -69,7 +73,7 @@ const CalendarScreen = () => {
             <View style = {styles.modalContainer}>
                 <Text style = {styles.modalTitle}>Notes for {selectedDate}</Text>
                 <TextInput
-                    style = {styles.TextInput}
+                    style = {styles.textInput}
                     placeholder='Write your notes here...'
                     value={notes[selectedDate] || ''}
                     onChangeText={ (text) => setNotes({...notes, [selectedDate]: text})}
@@ -85,6 +89,8 @@ const CalendarScreen = () => {
 
             </View>
         </Modal>
+
+        
         </View>
     );
 };
@@ -107,7 +113,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 20,
     },
-    tetxInput: {
+    textInput: {
         width: '100%',
         height: 100,
         borderWidth: 1,
@@ -130,7 +136,17 @@ const styles = StyleSheet.create({
         width: 200,
         height: 200,
         marginBottom: 20,
-    }
+    },
+    buttonContainer: {
+        padding: 10,
+    },
+    logoutButton:{
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        padding: 10,
+        borderRadius: 5,
+    },
 });
 
 export default CalendarScreen;

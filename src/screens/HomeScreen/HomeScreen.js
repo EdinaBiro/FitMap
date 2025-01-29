@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Dimensions, Button} from 'react-native'
+import { StyleSheet, Text, View, Dimensions, Button, TouchableOpacity} from 'react-native'
 import React, {useState, useEffect} from 'react';
 import MapView, {Marker} from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -10,6 +10,7 @@ const HomeScreen = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+
 
   const userLocaion = async () => {
     let {status} = await Location.requestForegroundPermissionsAsync();
@@ -40,6 +41,8 @@ const HomeScreen = () => {
           <Marker coordinate={mapRegion} title = 'Marker'/>
       </MapView>
       <Button title='Get Location' onPress={userLocaion} />
+
+
     </View>
   )
 }
