@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput} from 'react-native'
 import React, {useState} from 'react';
-import {Picker} from '@react-native-community/picker';
+
 
 
 const ProfileScreen = () => {
@@ -64,7 +64,7 @@ const ProfileScreen = () => {
 
         </View>
 
-        <View style={styles.infoContainer}>
+        {/* <View style={styles.infoContainer}>
           <Text style={styles.label}>Gender</Text>
           {isEditing ? (
             <Picker 
@@ -80,10 +80,10 @@ const ProfileScreen = () => {
             style={styles.input}
             editable={false}
             value={profile.gender}
-            />
+            /> */}
 
-          )}
-        
+          {/* )}
+         */}
 
         </View>
 
@@ -92,7 +92,7 @@ const ProfileScreen = () => {
       </TouchableOpacity>
 
       </View>
-      </View>
+      // </View>
   )
 }
 
