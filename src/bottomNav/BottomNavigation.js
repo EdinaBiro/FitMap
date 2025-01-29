@@ -7,13 +7,14 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import HomeScreen from '../screens/HomeScreen/HomeScreen'; 
 import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
-import WorkoutScreen from '../screens/WorkoutScreen/WorkoutScreen';
+import WorkoutScreen from '../screens/Workout/WorkoutScreen/WorkoutScreen';
 import { Platform } from 'react-native';
+import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
 
 const TabArray = [
     {route: 'HomeScreen', label:'HomeScreen', type: 'Ionicons', avtiveIcon: 'home', inActiveIcon: 'home-outline', component: HomeScreen},
     {route: 'ProfileScreen', label: 'ProfileScreen', type: 'Ionicons', activeIcon: 'person', inActiveIcon: 'person-outline', component: ProfileScreen },
-    {route: 'WorkoutScreen', label: 'WorkoutScreen', type: 'Ionicons', activeIcon: 'add', inActiveIcon: 'add-outline', component: WorkoutScreen},
+    {route: 'WorkoutScreen', label: 'WorkoutScreen', type: 'Ionicons', activeIcon: 'add', inActiveIcon: 'add-outline', component: WorkoutStackNavigator},
     {route: 'CalendarScreen', label: 'CalendarScreen', type: 'Ionicons', activeIcon: 'calendar', inActiveIcon: 'calendar-outline', component: CalendarScreen },
    
 
