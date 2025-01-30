@@ -1,11 +1,10 @@
 import { StyleSheet, Text, View,Image, Touchable, TouchableOpacity} from 'react-native';
-import React from 'react';
-import { createDrawerNavigator, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
+import React, {useState} from 'react';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
 import {Ionicons} from '@expo/vector-icons';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import HomeScreen from '../screens/HomeScreen';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import SettingsScreen from '../screens/SettingsScreen/SettingsScreen';
 import { createStackNavigator } from '@react-navigation/stack';
 
 
@@ -27,17 +26,58 @@ const MainStack = () => (
             component={BottomNavigation}
             options={({navigation}) => ({
                 headerLeft: () => <CustomHeader navigation={navigation} />,
-                headerShown: true
+                headerShown: true,
+                title: '',
             })} />
     </Stack.Navigator>
 );
 
+const CustomDrawerContent = (props) => {
+    const [isDarkTheme, setIsDarkTheme] = useState(false);
+    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+
+    const handleThemeToggle = () => {
+        setIsDarkTheme(previousState => !previousState);
+    };
+
+    const handleLogout = () => {
+        props.navigation.navigate('LoginScreen');
+    };
+
+    return(
+        <DrawerContentScrollView {...props}>
+            <DrawerItemList {...props}>
+                <TouchableOpacity onPress={ () => setIsDropdownVisible(!isDropdownVisible)}>
+                    <Text style={styles.settingsText}>Settings</Text>
+                </TouchableOpacity>
+                {isDropdownVisible && (
+                    <View style={styles.dropdown}>
+                        <View style={styles.option}>
+                        <View style={styles.optionText}>Dark Theme</View>
+                        <Switch 
+                            value={isDarkTheme}
+                            onValueChange={handleThemeToggle}
+                        />
+                    </View>
+                    <TouchableOpacity style={styles.option} onPress ={handleLogout}>
+                        <Text style={styles.optionText}>Log Out</Text>
+                    </TouchableOpacity>
+                    </View>
+                   
+                )}
+                </DrawerItemList>        
+                
+                </DrawerContentScrollView>
+    )
+}
+
 const DrawerNavigation = () => {
+
   return (
    <Drawer.Navigator
 
    drawerContent={
-    (props) =>{
+    (props) =>{ <CustomDrawerContent {...props} />
         return(
         <SafeAreaView>
             <View style={{
@@ -65,6 +105,17 @@ const DrawerNavigation = () => {
 
             </View>
             <DrawerItemList {...props} />
+
+            {/* <DrawerItem 
+            label="Theme"
+            icon={ () => <Ionicons name="moon" size={24} />}
+            onPress={handleThemeToggle}
+            />
+            <DrawerItem
+            label="Log Out"
+            icon={ () => <Ionicons name="log-out" size={24} />}
+            onPress={handleLogout}
+            /> */}
         </SafeAreaView>
         );
     }
@@ -99,7 +150,7 @@ const DrawerNavigation = () => {
 
         </Drawer.Screen>
 
-        <Drawer.Screen
+        {/* <Drawer.Screen
         name="Settings"
         options={{
             drawerLabel: "Settings",
@@ -111,7 +162,7 @@ const DrawerNavigation = () => {
         }}
         component={SettingsScreen}>
 
-        </Drawer.Screen>
+        </Drawer.Screen> */}
 
 
    </Drawer.Navigator>
@@ -119,6 +170,39 @@ const DrawerNavigation = () => {
 }
 
 
-const styles = StyleSheet.create({})
+
+const styles = StyleSheet.create({
+    settingsText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginVertical: 10,
+        marginLeft: 16,
+    },
+    dropdown: {
+        marginTop: 10,
+        marginLeft: 16,
+        marginRight: 16,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 10,
+        padding: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.8,
+        shadowRadius: 2,
+        elevation: 5,
+    },
+    option: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc',
+    },
+    optionText: {
+        fontSize: 16,
+    },
+})
+
 
 export default DrawerNavigation;
