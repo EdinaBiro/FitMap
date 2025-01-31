@@ -7,7 +7,6 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import HomeScreen from '../screens/HomeScreen/HomeScreen'; 
 import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
-import WorkoutScreen from '../screens/Workout/WorkoutScreen/WorkoutScreen';
 import { Platform } from 'react-native';
 import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
 
