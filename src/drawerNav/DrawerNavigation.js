@@ -1,11 +1,14 @@
-import { StyleSheet, Text, View,Image, Touchable, TouchableOpacity} from 'react-native';
-import React, {useState} from 'react';
+import { StyleSheet, Text, View,Image, Touchable, TouchableOpacity, Switch} from 'react-native';
+import React, {useContext, useState} from 'react';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
 import {Ionicons} from '@expo/vector-icons';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import HomeScreen from '../screens/HomeScreen';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStackNavigator } from '@react-navigation/stack';
+import ThemeContext from './ThemeContext';
+import LoginScreen from '../screens/LoginScreen';
+import { CommonActions } from '@react-navigation/native';
 
 
 const Drawer = createDrawerNavigator();
@@ -29,43 +32,59 @@ const MainStack = () => (
                 headerShown: true,
                 title: '',
             })} />
+        
     </Stack.Navigator>
 );
 
-const CustomDrawerContent = (props) => {
-    const [isDarkTheme, setIsDarkTheme] = useState(false);
-    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
 
-    const handleThemeToggle = () => {
-        setIsDarkTheme(previousState => !previousState);
-    };
+const CustomDrawerContent = (props) => {
+    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+    const {isDarkTheme, setIsDarkTheme} = useContext(ThemeContext);
+
 
     const handleLogout = () => {
         props.navigation.navigate('LoginScreen');
+        // props.navigation.dispatch(
+        //     CommonActions.reset({
+        //         index: 0,
+        //         routes: [{ name : 'LoginScreen'}],
+        //     })
+        // );
+       
+    };
+
+    const handleThemeToggle = () => {
+        setIsDarkTheme(prevTheme => !prevTheme);
     };
 
     return(
         <DrawerContentScrollView {...props}>
-            <DrawerItemList {...props}>
-                <TouchableOpacity onPress={ () => setIsDropdownVisible(!isDropdownVisible)}>
+            <View style={styles.profileContainer}>
+                <Image source={require("../../assets/images/profile.jpg")} style={styles.profileImage} />
+                </View>
+                <DrawerItemList {...props} />
+                <TouchableOpacity onPress={ () => setIsDropdownVisible(!isDropdownVisible)} style={styles.settingButton}>
+                    <Ionicons name="settings-outline" size={24} />
                     <Text style={styles.settingsText}>Settings</Text>
                 </TouchableOpacity>
                 {isDropdownVisible && (
                     <View style={styles.dropdown}>
                         <View style={styles.option}>
-                        <View style={styles.optionText}>Dark Theme</View>
+                        <Text style={styles.optionText}>Dark Theme</Text>
                         <Switch 
                             value={isDarkTheme}
                             onValueChange={handleThemeToggle}
                         />
+                        <Ionicons name={isDarkTheme ? "moon" : "sunny"} size={24}/>
                     </View>
                     <TouchableOpacity style={styles.option} onPress ={handleLogout}>
+                        <Ionicons name="log-out" size={24} />
                         <Text style={styles.optionText}>Log Out</Text>
                     </TouchableOpacity>
                     </View>
                    
                 )}
-                </DrawerItemList>        
+        
                 
                 </DrawerContentScrollView>
     )
@@ -77,9 +96,24 @@ const DrawerNavigation = () => {
    <Drawer.Navigator
 
    drawerContent={
-    (props) =>{ <CustomDrawerContent {...props} />
-        return(
-        <SafeAreaView>
+    (props) =>  <CustomDrawerContent {...props} />}
+    screenOptions = {{
+        drawerStyle: {
+            backgroundColor: "#ffffff",
+            width: 250
+        },
+        headerStyle: {
+            backgroundColor: "#ffffff",
+        },
+        headerShown: false,
+        headerTintColor: "#000000",
+        drawerLabelStyle: {
+            color: "#000000",
+            fontSize: 14,
+            marginLeft: -10,
+        }
+    }}>
+        {/* <SafeAreaView>
             <View style={{
                 height: 200,
                 width: "100%",
@@ -106,36 +140,11 @@ const DrawerNavigation = () => {
             </View>
             <DrawerItemList {...props} />
 
-            {/* <DrawerItem 
-            label="Theme"
-            icon={ () => <Ionicons name="moon" size={24} />}
-            onPress={handleThemeToggle}
-            />
-            <DrawerItem
-            label="Log Out"
-            icon={ () => <Ionicons name="log-out" size={24} />}
-            onPress={handleLogout}
-            /> */}
         </SafeAreaView>
         );
     }
-   }
-    screenOptions = {{
-        drawerStyle: {
-            backgroundColor: "#ffffff",
-            width: 250
-        },
-        headerStyle: {
-            backgroundColor: "#ffffff",
-        },
-        headerShown: false,
-        headerTintColor: "#000000",
-        drawerLabelStyle: {
-            color: "#000000",
-            fontSize: 14,
-            marginLeft: -10,
-        }
-    }}>
+   } */}
+    
         <Drawer.Screen
         name="Home"
         options={{
@@ -149,21 +158,10 @@ const DrawerNavigation = () => {
         component={MainStack}>
 
         </Drawer.Screen>
-
-        {/* <Drawer.Screen
-        name="Settings"
-        options={{
-            drawerLabel: "Settings",
-            title: "Settings",
-            headerShadowVisible: false,
-            drawerIcon: ()=> (
-                <Ionicons name="settings-outline" size={24} />
-            )
-        }}
-        component={SettingsScreen}>
-
-        </Drawer.Screen> */}
-
+        <Drawer.Screen 
+                name="LoginScreen"
+                component={LoginScreen}
+                options= {{headerShown: false}} />
 
    </Drawer.Navigator>
   )
@@ -202,6 +200,24 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 16,
     },
+    profileContainer: {
+        height: 200,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: "#fff",
+    },
+    profileImage: {
+        height: 100,
+        width: 100,
+        borderRadius: 50,
+        marginBottom: 12,
+    },
+    settingButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+    }
 })
 
 

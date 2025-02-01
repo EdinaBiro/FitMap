@@ -6,13 +6,16 @@ import { name as appName } from './app.json';
 import BottomNavigation from './src/bottomNav/BottomNavigation';
 import { NavigationContainer } from '@react-navigation/native';
 import DrawerNavigation from './src/drawerNav/DrawerNavigation';
+import { ThemeProvider } from './src/drawerNav/ThemeContext';
 
 const App = () => {
   return (
+    <ThemeProvider>
    <NavigationContainer>
       {/* <BottomNavigation /> */}
       <DrawerNavigation />
    </NavigationContainer>
+   </ThemeProvider>
     
   );
 };
