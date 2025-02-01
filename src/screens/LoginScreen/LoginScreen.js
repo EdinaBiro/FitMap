@@ -12,6 +12,8 @@ import auth from '@react-native-firebase/auth';
 import { AuthenticationToken,LoginManager, AccessToken } from 'react-native-fbsdk-next';
 import { signInWithPopup } from 'firebase/auth';
 import { provider} from '../../Firebase/firebase'; 
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import database from '@react-native-firebase/database';
 
 const LoginScreen = () => {
 
@@ -87,7 +89,6 @@ const LoginScreen = () => {
 
     const {control,handleSubmit,formState: {errors}} = useForm();
 
-  
 
     const onLoginPressed = () => {
       //validate user
@@ -122,6 +123,21 @@ const LoginScreen = () => {
     const onSignInGoogle = () => {
       console.warn('onSignInGoogle');
     }
+    GoogleSignin.configure({
+      webClientId: '1065715922957-2ml5kmhcs9tp2711rbapd0ahcehkbapf.apps.googleusercontent.com',
+    });
+
+    function onAuthStateChanged(user) {
+      setUser(user);
+      if (initializing) setInitializing(false);
+    }
+  
+    useEffect(() => {
+      const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
+      return subscriber; // unsubscribe on unmount
+    }, []);
+
+
 
     function onGoogleButtonPress() {
       signInWithPopup(auth, provider)
@@ -227,7 +243,7 @@ const LoginScreen = () => {
         />
         <CustomButton
           text = "Sign up with Google"
-          onPress={onSignInGoogle}
+          onPress={onGoogleButtonPress}
           bgColor="#FAE9EA"
           fgColor="DD4D44"
   
