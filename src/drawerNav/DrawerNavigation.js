@@ -6,7 +6,7 @@ import BottomNavigation from '../bottomNav/BottomNavigation';
 import HomeScreen from '../screens/HomeScreen';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStackNavigator } from '@react-navigation/stack';
-import ThemeContext from './ThemeContext';
+import {ThemeContext} from './ThemeContext';
 import LoginScreen from '../screens/LoginScreen';
 import { CommonActions } from '@react-navigation/native';
 
@@ -158,10 +158,10 @@ const DrawerNavigation = () => {
         component={MainStack}>
 
         </Drawer.Screen>
-        <Drawer.Screen 
+        {/* <Drawer.Screen 
                 name="LoginScreen"
                 component={LoginScreen}
-                options= {{headerShown: false}} />
+                options= {{headerShown: false}} /> */}
 
    </Drawer.Navigator>
   )
