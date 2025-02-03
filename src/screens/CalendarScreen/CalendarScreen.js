@@ -1,24 +1,47 @@
 import React, { useEffect, useState, useCallback } from 'react'; 
-import { StyleSheet, View, Text, Button, Platform,  Modal, TextInput, Image, TouchableOpacity, PermissionsAndroid,ScrollView, FlatList} from 'react-native';
+import { StyleSheet, View, Text, Button, Platform,  Modal, TextInput, Image, TouchableOpacity, PermissionsAndroid,ScrollView, FlatList, PixelRatio} from 'react-native';
 import * as ExpoCalendar from 'expo-calendar';
 import { Calendar } from 'react-native-calendars';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { useComposedEventHandler } from 'react-native-reanimated';
 import Geolocation from '@react-native-community/geolocation';
+import moment from 'moment';
+import Emoji from 'react-native-emoji';
+import RNPickerSelect from 'react-native-picker-select';
 
 const CalendarScreen = () => {
 
-    //const [calendarEvents, setCalendarEvents] = useState([]);
-    const[selectedDate, setSelectedDate] = useState('');
+    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedEvent, setSelectedEvent] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [notes, setNotes] = useState({});
     const [images, setImages] = useState({});
-    const navigation = useNavigation();
+    const [weather, setWeather] = useState('');
+    const [daysOfWeek, setDaysOfWeek] = useState('');
+    const [workouts, setWorkouts] = useState({});
 
+    const navigation = useNavigation();
+    const date = moment().format('YYYY.MM.DD');
 
     const [routes, setRoutes] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
+
+    const [events, setEvents] = useState({
+        '2025-02-03': [{time: '10:00', title: 'Edzes: joga'}, {time: '14:00', title: 'Edzes: szaladas'}],
+        '2025-02-10': [{time: '10:00', title: 'Edzes: joga'}, {time: '14:00', title: 'Edzes: szaladas'}],
+    })
+
+ 
+
+    const fetchWeatherData = (latitude, longitude) => {
+        fetch(`https://api.weatherapi.com/v1/current.json?key=e0deebe2af12488d89c123118250302&q=${latitude},${longitude}`)
+            .then(response => response.json())
+            .then(data => {
+                setWeather(data.current.condition.text);
+            })
+            .catch(error => console.log(error));
+    };
 
     const requestLocationPermission = async () => {
         if(Platform.OS === 'android'){
@@ -79,6 +102,57 @@ const CalendarScreen = () => {
         requestLocationPermission();
     }, []);
 
+    const onDayPress = (day) => {
+        setSelectedDate(day.dateString);
+        setSelectedEvent('');
+        setDaysOfWeek(moment(day.dateString).format('dddd'));
+
+        const workoutForDay = workouts[day.dateString] || {distance: 0, duration: 0, calories: 0};
+        setModalVisible(true);
+    };
+
+    const saveNote = () => {
+        setModalVisible(false);
+    };
+
+    const handleEventChange = (event) => {
+        setSelectedEvent(event);
+    };
+
+    const getEventOptions = () => {
+        return events[selectedDate] ?
+         events[selectedDate].map((event, index) => ({
+            label: '${event.time} - ${event.title}',
+            value: event.title,
+         }))
+         : [];
+    };
+
+    const addWorkoutToAgenda = () => {
+        const newWorkout = {
+            date: selectedDate,
+            time: workoutTime,
+            description: workoutDescription,
+        };
+
+        setWorkouts(prev => [...prev,newWorkout]);
+    }
+
+    const pickImage = async() => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaType: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4,3],
+            quality: 1,
+        });
+        if( !result.canceled){
+            setImages((prev) => ({
+                ...prev,
+                [selectedDate]: result.assets[0].uri,
+            }));
+        }
+    };
+
     const renderRouteCard = ({ item }) => (
         <View style={styles.card}>
             <Image source={{ uri: item.routeImage }} style={styles.cardImage} />
@@ -93,8 +167,31 @@ const CalendarScreen = () => {
         <View style={styles.container}>
             <View style={styles.calendarContainer}>
                 <Calendar
-                    onDayPress={ (day) => setSelectedDate(day.dateString)}
-                    style={styles.calednar}/>
+                markedDates={{
+                    [selectedDate]: {selected: true, selectedColor: 'blue', selectedTextColor: 'white'}
+                }}
+                    onDayPress={ onDayPress}
+                    style={styles.calednar}
+                />
+
+            <View style={styles.agenda}>
+                {selectedDate && (
+                    <View>
+                        <Text style={styles.dateText}>Selected Date: {selectedDate}</Text>
+
+                        <RNPickerSelect
+                            onValueChange={handleEventChange}
+                            items={getEventOptions()}
+                            placeholder={{label: '...', value: null}}
+                            value={selectedEvent}
+                            styles={pickerStyles}
+                        />
+                    {selectedEvent && (
+                        <Text style={styles.eventText}>Kivalasztott esemeny: {selectedEvent}</Text>
+                    )} 
+                    
+                    </View>
+                )}
             </View>
         <View style={{flex: 1}} >
             <FlatList
@@ -104,103 +201,54 @@ const CalendarScreen = () => {
                 style={styles.list}
                 showVerticalScrollIndicator={false} />
         </View>
+        <Modal visible={modalVisible} animationType="slide">
+            <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}> {selectedDate}</Text>
+                <Text style={styles.dayName}>{daysOfWeek}</Text>
+
+                <Text style={styles.workoutText}><Emoji name="runner" style={styles.emoji}/> Distance: {workouts[selectedDate]?.distance || 0} km</Text>
+                <Text style={styles.workoutText}><Emoji name="timer_clock" style={styles.emoji}/> Duration: {workouts[selectedDate]?.duration || 0} min</Text>
+                <Text style={styles.workoutText}><Emoji name="fire" style={styles.emoji}/>Calories: {workouts[selectedDate]?.calories || 0} kcal</Text>
+
+                <TouchableOpacity onPress={pickImage} style={styles.imageButton}>
+                <Text style={styles.imageButtonText}>Select an image of the wrokout </Text>
+            </TouchableOpacity>
+            {images[selectedDate] && (
+                <Image source={{uri: images[selectedDate]}} style={styles.imagePreview}/>    
+            )}
+            {weather && <Text style={styles.weatherText}> Weather: {weather}</Text>}
+                <TextInput
+                    style={styles.textInput}
+                    placeholder="Write your notes here..."
+                    value={notes[selectedDate] || ''}
+                    onChangeText={(text) => setNotes({...notes, [selectedDate]: text})}
+                />
+        
+            <Text style={styles.weatherText}> Weather: {weather}</Text>
+            <Button title="Save" onPress={saveNote}/>
+            <Button title="Close" onPress={() => setModalVisible(false)} />
+            </View>
+
+        </Modal>
 
          </View>
-        //     <Text style={styles.title}>Random Running Routes</Text>
-        //     <Button title="Generated Routes" onPress={generateRandomRoute} />
+         
+            <Text style={styles.title}>Random Running Routes</Text>
+            <Button title="Generated Routes" onPress={generateRandomRoute} />
 
-        //     <ScrollView horizontal style={styles.cardContainer}>
-        //         <FlatList
-        //             data={routes}
-        //             renderItem={renderRouteCard}
-        //             keyExtractor={(item) => item.id}
-        //             horizontal
-        //             showsHorizontalScrollIndicator={false}
-        //         />
-        //     </ScrollView>
-        // </View>
-       
+            <ScrollView horizontal style={styles.cardContainer}>
+                 <FlatList
+                     data={routes}
+                   renderItem={renderRouteCard}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                 showsHorizontalScrollIndicator={false}
+                />
+            </ScrollView>
+        </View>
     );
-
-    // //datum kivalasztasakor modal megjelenitese
-    // const onDayPress = (day) => {
-    //     setSelectedDate(day.dateString);
-    //     setModalVisible(true);
-    // };
-
-    // const saveNote = () => {
-    //     setModalVisible(false);
-    // };
-
-    // const pickImage = async() => {
-    //     const result = await ImagePicker.launchImageLibraryAsync({
-    //         mediaType: ImagePicker.MediaTypeOptions.Images,
-    //         allowsEditing: true,
-    //         aspect: [4,3],
-    //         quality: 1,
-    //     });
-    //     if( !result.canceled){
-    //         setImages((prev) => ({
-    //             ...prev,
-    //             [selectedDate]: result.asstes[0].uri,
-    //         }));
-    //     }
-    // };
-
- 
-    
-    // return (
-    //     <View style={styles.container}>
-    //         <Calendar style={{
-    //             borderWidth: 1,
-    //             borderColor: 'gray',
-    //             height: 350
-    //         }}
-    //         theme={{
-    //             backgroundColor: '#ffffff',
-    //             calendarBackground: '#ffffff',
-    //             textSectionTitleColor: '#b6c1cd',
-    //             selectedDayBackgroundColor: '#00adf5',
-    //             selectedDayTextColor: '#ffffff',
-    //             todatTextColor: '#00adf5',
-    //             dayTextColor: '#2d4150',
-    //             textDisabledColor: '#dd99ee'
-    //         }}
-    //         //  onDayPress={onDayPress}
-    //         //  monthFormat={'MMMM yyyy'}
-    //         //  makingType={'custom'}
-    //         //  markedDates={{
-    //         //     ...Object.keys(notes).reduce((acc,date) => {
-    //         //         acc[date]= {marked: true, dotColor: 'blue'};
-    //         //         return acc;
-    //         //     }, {}),
-    //         // }}
-    //     />
-    //     <Modal visible={modalVisible} animationType='slide'>
-    //         <View style = {styles.modalContainer}>
-    //             <Text style = {styles.modalTitle}>Notes for {selectedDate}</Text>
-    //             <TextInput
-    //                 style = {styles.textInput}
-    //                 placeholder='Write your notes here...'
-    //                 value={notes[selectedDate] || ''}
-    //                 onChangeText={ (text) => setNotes({...notes, [selectedDate]: text})}
-    //             />
-    //             <TouchableOpacity onPress = {pickImage} style={styles.imageButton}>
-    //                 <Text style = {styles.imageButtonText}>Pick an image</Text>
-    //             </TouchableOpacity>
-    //             {images[selectedDate] && (
-    //                 <Image source={{ uri: images[selectedDate]}} style ={styles.imagePreview} />
-    //             )}
-    //             <Button title = "Save" onPress={saveNote} />
-    //             <Button title = "Close" onPress={() => setModalVisible(false)} />
-
-    //         </View>
-    //     </Modal>
-
-        
-    //     </View>
-    // );
 };
+
 
 const styles = StyleSheet.create({
     container: {
@@ -219,6 +267,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         marginBottom: 20,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        marginTop: 20,
+        marginLeft: 15,
     },
     textInput: {
         width: '100%',
@@ -230,9 +283,11 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top',
     },
     imageButton: {
-        backgroundColor: '#007BFF',
+        backgroundColor: '#808080',
         padding: 10,
         borderRadius: 5,
+        marginBottom: 10,
+        borderRadius: 30,
         marginBottom: 10,
     },
     imageButtonText: {
@@ -304,6 +359,22 @@ const styles = StyleSheet.create({
         flex: 1,
         marginTop: 100,
         witdh: '100%',
+    },
+    weatherText: {
+        fontSize: 16,
+        marginBottom: 20,
+    },
+    dayName: {
+        fontSize: 16,
+        fontWeight: 'normal',
+        position: 'absolute',
+        top: 20,
+        left: 0,
+        marginTop: 35,
+        marginLeft: 20,
+    },
+    emoji: {
+        fontSize: 20,
     },
 });
 
