@@ -29,6 +29,7 @@ const Navigation = () => {
         <Stack.Screen name ="Main" component={BottomNavigation}/>
         <Stack.Screen name="DrawerNavigation" component={DrawerNavigation}/>
         <Stack.Screen name="WorkoutScreen" component={WorkoutScreen} />
+        <Stack.Screen name="ProfileScreen" component={ProfileScreen}  />
 
       </Stack.Navigator>
    </NavigationContainer>
