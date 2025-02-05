@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, ImageBackgr
 import React, {useState, useEffect} from 'react';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
+import { ScrollView } from 'react-native-gesture-handler';
 
 
 
@@ -63,15 +64,17 @@ const ProfileScreen = () => {
   }
 
   return (
-    <ImageBackground source={require('../../../assets/images/bg2.jpg')} style={styles.container}>
-      <View style={styles.overlay} />
+
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <Text style={styles.title}>Profile</Text>
+      <View style={styles.overlay}>
       <View style={styles.card}>
         <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
           <Image source={{uri: profile.profileImage}} style={styles.profileImage} />
         </TouchableOpacity>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Age: </Text>
+        <Text style={styles.label}>Age </Text>
+        <View style={styles.infoBox}>
           <TextInput 
             style={styles.input}
             editable={isEditing}
@@ -83,8 +86,8 @@ const ProfileScreen = () => {
           />
         </View>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Height</Text>
+        <Text style={styles.label}>Height(cm)</Text>
+        <View style={styles.infoBox}>
           <TextInput
             style={styles.input}
             editable={isEditing}
@@ -96,8 +99,8 @@ const ProfileScreen = () => {
 
         </View>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Weight</Text>
+        <Text style={styles.label}>Weight(kg)</Text>
+        <View style={styles.infoBox}>
           <TextInput
             style={styles.input}
             editable={isEditing}
@@ -109,8 +112,8 @@ const ProfileScreen = () => {
 
         </View>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Gender</Text>
+        <Text style={styles.label}>Gender</Text>
+          <View style={styles.infoBox}>
             <Picker 
             selectedValue={profile.gender}
             style={styles.input}
@@ -120,10 +123,10 @@ const ProfileScreen = () => {
               <Picker.Item label="Female" value="female" />
               <Picker.Item label="Male" value="male" />
             </Picker>
-
         </View>
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Activity Level: </Text>
+
+        <Text style={styles.label}>Activity Level: </Text>
+        <View style={styles.infoBox}>
           <Picker
             selectedValue={profile.activityLevel}
             style={styles.input}
@@ -144,7 +147,8 @@ const ProfileScreen = () => {
       </TouchableOpacity>
 
       </View>
-      </ImageBackground>
+      </View>
+      </ScrollView>
   )
 }
 
@@ -155,59 +159,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: '#fff',
+    paddingToop: 20,
   },
 
   card:{
     width: "90%",
-    height: "80%",
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    minHeight: 500,
     padding: 25,
     borderRadius: 15,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     shadowColor: "#000",
     shadowOpacity: 0.8,
     shadowOffset: {width: 0, height: 2},
     shadowRadius: 10,
     elavation: 5,
-    position: 'realtive',
-    paddingTop: 60,
+    paddingTop: 200,
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 20,
   
   },
 
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 80,
     marginBottom:10,
-    alignSelf: 'flex-start',
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    width: '100%',
-    marginBottom: 10,
-    alignItems:'center',
-   
+    alignSelf: 'center',
   },
 
   label: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: "#fff",
-    width: '40%',
+    color: "black",
+    width: '100%',
+    lineHeight: 20,
+    color: '#333',
   },
   input:{
-    borderBottomWidth: 1,
     borderColor: '#ccc',
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 0,
     fontSize: 16,
-    color: "#fff",
+    color: "black",
+    width: '80%',
+    marginTop: 10
   },
 
   button: {
-    marginTop: 25,
+    marginTop: 50,
     backgroundColor: '#555',
     padding: 10,
     borderRadius: 25,
@@ -223,18 +224,45 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'absolute',
-    top: -50,
-    left: 20,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    top: 50,
+    left: 120,
+    width: 140,
+    height: 140,
+    borderRadius: 80,
     borderWidth: 3,
     borderColor: "#fff",
     overflow: 'hidden',
     alignSelf: 'center',
     backgroundColor: "#fff",
+    marginBottom: 20,
    
-  }
+  },
+  infoBox: {
+    width: '100%',
+    padding: 10,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: {width: 0, height: 2},
+    shadowRadius:4,
+    elevation: 3,
+    marginBottom: 10,
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+scrollContainer:{
+  flexGrow: 1,
+  paddingBottom: 20,
+},
+title: {
+  marginTop: 20,
+  fontSize: 25,
+  fontFamily: 'Open Sans',
+  textAlign:'center',
+  alignSelf: 'center',
+},
 
 
 });
