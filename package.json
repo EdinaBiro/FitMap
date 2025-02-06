@@ -45,6 +45,7 @@
     "react-native": "0.76.6",
     "react-native-animatable": "^1.4.0",
     "react-native-calendars": "^1.1308.0",
+    "react-native-config": "^1.5.3",
     "react-native-emoji": "^1.8.0",
     "react-native-fast-image": "^8.6.3",
     "react-native-fbsdk-next": "^13.4.0",

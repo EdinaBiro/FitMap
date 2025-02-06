@@ -8,6 +8,9 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 const ProfileScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [bmi, setBmi] = useState(null);
+  const [hoverText, setHoverText] = useState('');
+  const [activityLevel, setActivityLevel] = useState('1');
   const [profile,setProfile] = useState({
     age: '',
     gender: '',
@@ -16,6 +19,14 @@ const ProfileScreen = () => {
     activityLevel: '1',
     profileImage: 'https://via.placeholder.com/80'
   });
+
+  const activityTexts = {
+    1: 'Sedentary - Little or no exercise',
+    2: 'Lightly Active - Light exercise/sports 1-3 days/week',
+    3: 'Moderately Active - Moderate exercise/sports 3-5 days/week',
+    4: 'Very Active - Hard exercise/sports 6-7 days a week',
+    5: 'Super Active - Very hard exercise/sports & physical job or training twice a day'
+  };
 
   useEffect( () => {
     (async () => {
@@ -26,6 +37,10 @@ const ProfileScreen = () => {
       }
     }) ();
   }, []);
+
+  useEffect( () => {
+    calculateBMI();
+  }, [profile.height, profile.weight]);
 
   const handleChange = (key,value) => {
     setProfile({...profile, [key]: value});
@@ -47,6 +62,7 @@ const ProfileScreen = () => {
   const handleSave = () =>  {
     if(validateInput()){
       toggleEdit();
+      calculateBMI();
     }
   };
 
@@ -63,15 +79,41 @@ const ProfileScreen = () => {
     }
   }
 
+  const calculateBMI = () => {
+    const {height, weight} = profile;
+    if( height && weight && !isNaN(height) && !isNaN(weight)) {
+       const heightInMeters = height / 100;
+      const bmiValue = weight / (heightInMeters * heightInMeters);
+      setBmi(bmiValue.toFixed(1));
+      }
+      else{
+        setBmi(null);
+      }
+   
+  };
+
+  const handleActivityLevelChange = (level) => {
+    setProfile({...profile, activityLevel: level});
+    setHoverText(activityTexts[level]);
+  };
+
+
+
   return (
 
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <Text style={styles.title}>Profile</Text>
+      <View style={styles.profileContainer}>
+
+        <View style ={styles.profileOverlay}>
+        <Text style={styles.title}>Profile</Text>
+        </View>
+      </View>
       <View style={styles.overlay}>
       <View style={styles.card}>
         <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
           <Image source={{uri: profile.profileImage}} style={styles.profileImage} />
         </TouchableOpacity>
+
 
         <Text style={styles.label}>Age </Text>
         <View style={styles.infoBox}>
@@ -125,20 +167,26 @@ const ProfileScreen = () => {
             </Picker>
         </View>
 
-        <Text style={styles.label}>Activity Level: </Text>
-        <View style={styles.infoBox}>
-          <Picker
-            selectedValue={profile.activityLevel}
-            style={styles.input}
-            enabled={isEditing}
-            onValueChange={(itemValue) => handleChange('activityLevel', itemValue)}
-          >
-            <Picker.Item label="1 - Sedentary" value="1" />
-            <Picker.Item label="2 - Lightly Active" value="2" />
-            <Picker.Item label="3 - Moderately Active" value="3" />
-            <Picker.Item label="4 - Very Active" value="4" />
-            <Picker.Item label="5 - Super Active" value="5" />
-          </Picker>
+        <Text style={styles.label}>Acivity Level</Text>
+        <View style={styles.activityLevelContainer}>
+          {[1,2,3,4,5].map((level) => (
+            <TouchableOpacity
+              key ={ level}
+              style={[styles.circle, profile.activityLevel == level && styles.selectedButton]}
+              onPress={ () => handleActivityLevelChange(level.toString())}
+            >
+              <Text style={styles.activityButtonText}>{level}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {hoverText ? (
+          <Text style={styles.hoverText}>{hoverText}</Text>
+        ): null}
+
+        <View style={styles.bmiContainer}>
+          <Text style={styles.bmiTitle}>YOUR BMI</Text>
+          <Text>{bmi ? bmi: 'BMI will be calculated once you enter your details'}</Text>
         </View>
 
 
@@ -179,6 +227,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 20,
   
+  
   },
 
   profileImage: {
@@ -196,6 +245,7 @@ const styles = StyleSheet.create({
     width: '100%',
     lineHeight: 20,
     color: '#333',
+    textAlign: 'left',
   },
   input:{
     borderColor: '#ccc',
@@ -204,11 +254,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "black",
     width: '80%',
-    marginTop: 10
+    marginTop: 10,
+    
   },
 
   button: {
-    marginTop: 50,
+    marginTop: 30,
     backgroundColor: '#555',
     padding: 10,
     borderRadius: 25,
@@ -224,8 +275,8 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'absolute',
-    top: 50,
-    left: 120,
+    top: 30,
+    left: 100,
     width: 140,
     height: 140,
     borderRadius: 80,
@@ -235,6 +286,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: "#fff",
     marginBottom: 20,
+    backgroundColor: 'gray',
+    
    
   },
   infoBox: {
@@ -251,10 +304,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 10
+    
   },
 scrollContainer:{
   flexGrow: 1,
   paddingBottom: 20,
+  alignItems: 'center',
 },
 title: {
   marginTop: 20,
@@ -263,6 +319,49 @@ title: {
   textAlign:'center',
   alignSelf: 'center',
 },
+bmiContainer:{
+  witdh: '100%',
+  padding: 20,
+  backgroundColor:'#f5f5f5',
+  borderRadius: 10,
+  marginTop: 20,
+  marginBottom: 20,
+  alignItems: 'center',
+},
+bmiTitle: {
+  fontSize: 18, 
+  fontWeight: 'bold',
+  marginBottom: 10,
+},
+activityLevelContainer:{
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  width: '80%',
+  marginTop: 20,
+},
+circle: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: '#f0f0f0',
+  justifyContent: 'center',
+  alignItems: 'center',
+
+},
+selectedButton: {
+  backgroundColor: '#4CAF50',
+},
+activityButtonText:{
+  color: '#333',
+  fontSize: 18,
+},
+hoverText: {
+  fontSize: 16,
+  fontStyle: 'italic',
+  color: '#888',
+  marginTop: 10,
+}
+
 
 
 });
