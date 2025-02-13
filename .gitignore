@@ -36,3 +36,6 @@ yarn-error.*
 
 android/.gradle/
 android/app/build/outputs/apk/debug/app-debug.apk
+
+venv/
+
