@@ -15,16 +15,25 @@ import { provider} from '../../Firebase/firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import database from '@react-native-firebase/database';
 
+
+
 const LoginScreen = () => {
 
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState();
+
+  const navigation = useNavigation();
+ 
 
 
   // Handle user state changes
   function onAuthStateChanged(user) {
     console.log(user, 'user');
     setUser(user);
+
+    if(user) {
+      navigation.navigate('CalendarScreen');
+    }
     if (initializing) setInitializing(false);
   }
 
@@ -85,7 +94,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
 
     const {height} = useWindowDimensions();
-    const navigation = useNavigation();
+    
 
     const {control,handleSubmit,formState: {errors}} = useForm();
 
@@ -99,11 +108,18 @@ const LoginScreen = () => {
 
     const handleLogin = () => {
       console.warn('Logged in');
+      console.log('Navigating to CalendarScreen');
       navigation.navigate('CalendarScreen');
     }
 
     const handleSignUp = () => {
-      console.log('Sign up!');
+      auth 
+      .createUserWithEmailAndPassword(email,password)
+      .then(userCredentials => {
+        const user = userCredentials.user;
+        console.log(user.email);
+      })
+      .catch(error => alert(error.message))
     }
 
     const onForgotPasswordPressed = () => {
@@ -116,21 +132,16 @@ const LoginScreen = () => {
 
     }
 
-    const onSignInFacebook = () => {
-      console.warn('onSignInFacebook');
-    }
-
-    const onSignInGoogle = () => {
-      console.warn('onSignInGoogle');
-    }
-    GoogleSignin.configure({
-      webClientId: '1065715922957-2ml5kmhcs9tp2711rbapd0ahcehkbapf.apps.googleusercontent.com',
+    useEffect(() => {
+      GoogleSignin.configure({
+        webClientId: '168328468027-nck4olakkh9mfbgdfrhehl46igrm952l.apps.googleusercontent.com',
+        offlineAccess: true,
     });
+      const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
+      return subscriber;
 
-    function onAuthStateChanged(user) {
-      setUser(user);
-      if (initializing) setInitializing(false);
-    }
+    }, []);
+   
   
     useEffect(() => {
       const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
@@ -139,35 +150,25 @@ const LoginScreen = () => {
 
 
 
-    function onGoogleButtonPress() {
-      signInWithPopup(auth, provider)
-  .then((result) => {
-    // This gives you a Google Access Token. You can use it to access the Google API.
-    // const credential = GoogleAuthProvider.credentialFromResult(result);
-    // const token = credential.accessToken;
-    // The signed-in user info.
-    const user = result.user;
+  const onGoogleButtonPress = async () => {
+      try{
+          await GoogleSignin.hasPlayServices();
+          const {idToken} = await GoogleSignin.signIn();
 
-    //name = user.displayName
-    //email = user.email
-    //photo = user.photoURL
+          const googleCredential = auth.GoogleAuthProvider.credential(idToken);
 
-    alert(user.displayName);
-    // IdP data available using getAdditionalUserInfo(result)
-    // ...
-  }).catch((error) => {
-    // Handle Errors here.
-    const errorCode = error.code;
-    const errorMessage = error.message;
-    // The email of the user's account used.
-    const email = error.customData.email;
-    // The AuthCredential type that was used.
-    const credential = GoogleAuthProvider.credentialFromError(error);
+          await auth().signInWithCredential(googleCredential);
 
-    console.log(errorMessage);
-    // ...
-  });
-    }
+          console.log("Successfull Google Login");
+
+          navigation.navigate('CalendarScreen');
+      }catch(error){
+        console.error(error.message, error.code);
+        alert(error.message);
+      }
+    };
+
+
     async function onFacebookButtonPressAndroid() {
       // Attempt login with permissions
       const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
@@ -225,7 +226,7 @@ const LoginScreen = () => {
         />
   
   
-        <CustomButton text="Log in" onPress={onLoginPressed }/>
+        <CustomButton text="Log in" onPress={handleSignUp }/>
        
   
         <CustomButton 
@@ -262,12 +263,6 @@ const LoginScreen = () => {
     );
   }
 
-  // return (
-  //   // <View>
-  //   //   <Text>Welcome {user.email}</Text>
-  //   // </View>
-  //   navigation.navigate('CalendarScreen')
-  // );
 
   
 };
