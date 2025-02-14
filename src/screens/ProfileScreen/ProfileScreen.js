@@ -35,6 +35,13 @@ const ProfileScreen = () => {
       if(cameraStatus !== 'granted' || mediaStatus !== 'granted'){
         alert('Prmission to access media library and camera is required');
       }
+
+      if(userId){
+        const response = await fetch(`http://127.0.0.1:8000/profile/${userId}`);
+        console.log("Response status:", response.status);
+        const data = await response.json();
+        setProfile(data);
+      }
     }) ();
   }, []);
 
@@ -59,12 +66,43 @@ const ProfileScreen = () => {
     return true;
   };
 
-  const handleSave = () =>  {
+  const handleSave = async() =>  {
     if(validateInput()){
+      try{
+        const url= userId ? `http://127.0.0.1:8000/profile/${userId}` : `http://127.0.0.1:8000/profile`;
+        const method = userId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method : method,
+          headers: {
+            'Content-Type' : 'application/json'
+          },
+          body: JSON.stringify(profile)
+
+        });
+
+        if(response.ok){
+          const data = await response.json();
+          setProfile(data);
+          if(!userId){
+            setUserId(data.id);
+          }
+          toggleEdit();
+          alert("Profile saved successfully");
+        }else{
+          const errorData = await response.json();
+          alert("Error savong profile: ${errorData.detail || response.statusText} ")
+          console.error("Error details:", errorData);
+        }
+
+      }catch(error){
+        alert("An unexpected error occured: ${error.message}")
+        console.error("Fetch error:", error);
+      }
       toggleEdit();
       calculateBMI();
     }
-  };
+  }
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({

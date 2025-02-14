@@ -36,3 +36,12 @@ yarn-error.*
 
 android/.gradle/
 android/app/build/outputs/apk/debug/app-debug.apk
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+venv/
+env/
