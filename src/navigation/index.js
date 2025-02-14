@@ -1,6 +1,4 @@
-import { View, Text } from 'react-native';
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -9,11 +7,8 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen/ForgotPassword
 import NewPasswordScreen from '../screens/NewPasswordScreen/NewPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
-import BottomNavigation from '../bottomNav/BottomNavigation';
-import DrawerNavigation from '../drawerNav/DrawerNavigation';
 import WorkoutScreen from '../screens/Workout/WorkoutScreen/WorkoutScreen';
 import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
-import { navigationRef } from './NavigationRef';
 import StartWorkoutScreen from '../screens/Workout/StartWorkoutScreen/StartWorkoutScreen';
 import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
 
@@ -30,8 +25,6 @@ const Navigation = () => {
         <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen} />
         <Stack.Screen name="HomeScreen" component={HomeScreen} />
         <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
-        {/* <Stack.Screen name="BottomNavigation" component={BottomNavigation}/> */}
-        {/* <Stack.Screen name="DrawerNavigation" component={DrawerNavigation}/> */}
         <Stack.Screen name="WorkoutScreen" component={WorkoutScreen} />
         <Stack.Screen name="ProfileScreen" component={ProfileScreen}  />
         <Stack.Screen name="StartWorkoutScreen" component={StartWorkoutScreen}  />

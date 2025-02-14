@@ -1,18 +1,9 @@
-import { StyleSheet, Text, View,Image, Touchable, TouchableOpacity, Switch} from 'react-native';
+import { StyleSheet, Text, View,Image, TouchableOpacity, Switch} from 'react-native';
 import React, {useContext, useState} from 'react';
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
+import { DrawerContentScrollView,DrawerItemList } from '@react-navigation/drawer';
 import {Ionicons} from '@expo/vector-icons';
-import BottomNavigation from '../bottomNav/BottomNavigation';
-import HomeScreen from '../screens/HomeScreen';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { createStackNavigator } from '@react-navigation/stack';
 import {ThemeContext} from './ThemeContext';
-import LoginScreen from '../screens/LoginScreen';
-import { CommonActions } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useNavigation} from '@react-navigation/native';
-import { firebase } from '@react-native-firebase/auth';
-import {navigationRef, navigate} from '../navigation/NavigationRef';
+import {navigationRef} from '../navigation/NavigationRef';
 import auth from '@react-native-firebase/auth';
 
 
@@ -27,7 +18,6 @@ const CustomDrawerContent = (props) => {
              console.log('Logging out...');
              await auth().signOut();
              console.log('User signed out');
-             //props.navigation.replace('LoginScreen')
         }else{
             console.log("No user currently signed in");
         }

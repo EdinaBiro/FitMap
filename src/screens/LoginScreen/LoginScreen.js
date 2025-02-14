@@ -13,7 +13,7 @@ import { AuthenticationToken,LoginManager, AccessToken } from 'react-native-fbsd
 import { signInWithPopup } from 'firebase/auth';
 import { provider} from '../../Firebase/firebase'; 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import database from '@react-native-firebase/database';
+
 
 
 

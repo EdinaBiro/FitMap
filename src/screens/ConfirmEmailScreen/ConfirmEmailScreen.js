@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View, Image, ScrollView} from 'react-native'
 import React from 'react';
 import CustomInput from '../../components/CustomInput';
-import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
 import { useNavigation } from '@react-navigation/native';
 import {useForm} from 'react-hook-form';

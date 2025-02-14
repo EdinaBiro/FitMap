@@ -35,48 +35,6 @@ const screenOptions = {
     },
 };
 
-// const BottomNavigation = () => {
-//     return(
-//         <Tab.Navigator screenOptions={screenOptions}>
-//             <Tab.Screen
-//                 name="DrawerHome"
-//                 component={HomeScreen}
-//                 options={{
-//                     tabBarIcon: ({focused}) => {
-//                         return(
-//                             <Image
-//                             source={focused ? icons.home : icons.homeOutline}
-//                             resizeMode="contain"
-//                             style={{
-//                                 height: 24,
-//                                 width: 24,
-//                                 tintColor: focused ? "#ffffff" : "#000000",
-//                             }}
-//                             />
-//                         );
-//                     },
-//                 }}
-//                 >
-//                      {
-//             TabArray.map((item, index) => {
-//             return (
-//                 <Tab.Screen 
-//                 name = {item.route} 
-//                 component={item.component} 
-//                 key={index}
-//                 options ={{
-//                     tabBarShowLabel: false,
-//                     tabBarButton: (props) => <TabButton {...props} item ={item}/>
-//                 }}
-//                 />
-//             )
-//         })}
-
-//             </Tab.Screen>
-//         </Tab.Navigator>
-//     )
-// }
-
 
 const TabButton = (props) => {
     const {item, onPress,focused} = props;
@@ -163,7 +121,6 @@ const styles = StyleSheet.create({
     plusButton: {
         width: 70,
         height: 70,
-        //top: -20,
         borderRadius: 35,
         borderWidth: 2,
         alignItems: 'center',

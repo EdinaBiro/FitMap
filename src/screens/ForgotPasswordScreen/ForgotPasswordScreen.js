@@ -4,7 +4,6 @@ import CustomInput from '../../components/CustomInput';
 import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
 import {useForm} from 'react-hook-form';
-import {useRouter} from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 
 

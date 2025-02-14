@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'; 
 import { StyleSheet, View, Text, Button, Platform,  Modal, TextInput, Image, TouchableOpacity, PermissionsAndroid,ScrollView, FlatList, PixelRatio} from 'react-native';
-import * as ExpoCalendar from 'expo-calendar';
 import { Calendar } from 'react-native-calendars';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
