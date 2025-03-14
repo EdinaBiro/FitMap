@@ -3,6 +3,7 @@ import React from 'react';
 import FastImage from 'react-native-fast-image';
 import { useNavigation} from '@react-navigation/native';
 import StartWorkoutScreen from '../StartWorkoutScreen';
+import Geolocation from 'react-native-geolocation-service';
 
 
 const workouts = [
@@ -20,7 +21,17 @@ const WorkoutScreen = () => {
 const navigation = useNavigation();
 
 const handleWorkoutPress = (workoutName) => {
-   navigation.navigate('StartWorkoutScreen', {workoutName});
+    Geolocation.getCurrentPosition(
+        (position) => {
+            navigation.navigate('StartWorkoutScreen', {workoutName, initialLocation: position.coords});
+        },
+        (error) => {
+            console.log(error);
+            navigation.navigate('StartWorkoutScreen', {workoutName, initialLocation: null});
+        },
+        {enableHighAccuracy: true}
+    );
+  
 };
 
 
