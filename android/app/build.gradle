@@ -177,3 +177,4 @@ dependencies {
 
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
+//apply plugin: 'com.google.android.gms:play-services-location:18.0.0'
