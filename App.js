@@ -15,7 +15,6 @@ const App = () => {
   const [user, setUser] = useState(null);
 
     function onAuthStateChanged(user) {
-    console.log(user, 'user');
     setUser(user);
   }
 
@@ -28,7 +27,6 @@ const App = () => {
         <ThemeProvider>
           <NavigationContainer ref={navigationRef}>
             {user ? <DrawerNavigation/> : <Navigation />}
-            {/* <DrawerNavigation /> */}
           </NavigationContainer>
         </ThemeProvider>
   );

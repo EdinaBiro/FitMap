@@ -11,6 +11,7 @@ import WorkoutScreen from '../screens/Workout/WorkoutScreen/WorkoutScreen';
 import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import StartWorkoutScreen from '../screens/Workout/StartWorkoutScreen/StartWorkoutScreen';
 import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
+import TrainerProfileScreen from '../screens/TrainerProfileScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -29,6 +30,7 @@ const Navigation = () => {
         <Stack.Screen name="ProfileScreen" component={ProfileScreen}  />
         <Stack.Screen name="StartWorkoutScreen" component={StartWorkoutScreen}  />
         <Stack.Screen name="WorkoutStackNavigator" component={WorkoutStackNavigator}  />
+        <Stack.Screen name="TrainerProfileScreen" component={TrainerProfileScreen}  />
 
       </Stack.Navigator>
     
