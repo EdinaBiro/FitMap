@@ -9,13 +9,15 @@ import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
 import { Platform } from 'react-native';
 import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
+import SocialMediaScreen from '../screens/SocialMediaScreen/SocialMediaScreen';
 
 const TabArray = [
     {route: 'HomeScreen', label:'HomeScreen', type: 'Ionicons', avtiveIcon: 'home', inActiveIcon: 'home-outline', component: HomeScreen},
     {route: 'ProfileScreen', label: 'ProfileScreen', type: 'Ionicons', activeIcon: 'person', inActiveIcon: 'person-outline', component: ProfileScreen },
     {route: 'WorkoutScreen', label: 'WorkoutScreen', type: 'Ionicons', activeIcon: 'add', inActiveIcon: 'add-outline', component: WorkoutStackNavigator},
     {route: 'CalendarScreen', label: 'CalendarScreen', type: 'Ionicons', activeIcon: 'calendar', inActiveIcon: 'calendar-outline', component: CalendarScreen },
-   
+    {route: 'SocialMediaScreen', label: 'SocialMediaScreen', type: 'Ionicons', activeIcon: 'chatbubble', inActiveIcon: 'chatbubble-outline', component: SocialMediaScreen},
+
 
 ]
 
@@ -125,8 +127,8 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         alignItems: 'center',
         justifyContent: 'center',
-        borderColor: '#FFA500',
-        backgroundColor: '#FFA500',
+        borderColor: '#6200ee',
+        backgroundColor: '#fff',
 
     },
 
