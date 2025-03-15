@@ -37,7 +37,10 @@ const handleWorkoutPress = (workoutName) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Today's Workout</Text>
+        <View style={styles.header}>
+            <Text style={styles.title}>Hey User,</Text>
+            <Text style={styles.subTitle}>Choose your workout for today</Text>
+        </View>
         {workouts.map((workout, index) => (
            <TouchableOpacity key={index} style={styles.card} onPress={ () => handleWorkoutPress(workout.name)}>
                 <ImageBackground source={workout.image} style={styles.cardImage} resizeMode={FastImage.resizeMode.cover}>
@@ -85,10 +88,19 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        marginBottom: 30,
-        marginTop: 20,
-        justifyContent: 'center',
+        color: '#4A5568',
     },
+    subTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        alignSelf: 'flex-start',
+        color: '#718096',
+     },
+     header: {
+        alignSelf: 'flex-start',
+        marginLeft: 8,
+        marginBottom: 10,
+     },
     hiddenImage: {
         width: 0,
         height:1,
