@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     postContainer:{
         marginTop: 10,
         padding: 15,
-        backgroundColor: '#e0f7fa',
+        backgroundColor: '#CBC3E3',
         borderRadius: 8,
         borderLeftWidth: 5,
         borderLeftColor: '#009688',

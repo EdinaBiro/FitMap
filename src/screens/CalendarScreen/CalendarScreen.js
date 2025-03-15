@@ -8,6 +8,9 @@ import Geolocation from '@react-native-community/geolocation';
 import moment from 'moment';
 import Emoji from 'react-native-emoji';
 import RNPickerSelect from 'react-native-picker-select';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {Agenda} from 'react-native-calendars';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const CalendarScreen = () => {
 
@@ -19,19 +22,18 @@ const CalendarScreen = () => {
     const [weather, setWeather] = useState('');
     const [daysOfWeek, setDaysOfWeek] = useState('');
     const [workouts, setWorkouts] = useState({});
+    const [image1,setImage1] = useState(null);
+    const [image2,setImage2] = useState(null);
+    const [uploadDate1, setUploadDate1] = useState(null);
+    const [uploadDate2, setUploadDate2] = useState(null);
+    const [showDatePicker1, setShowDatePicker1] = useState(false);
+    const [showDatePicker2, setShowDatePicker2] = useState(false);
+
+
 
     const navigation = useNavigation();
     const date = moment().format('YYYY.MM.DD');
 
-    const [routes, setRoutes] = useState([]);
-    const [userLocation, setUserLocation] = useState(null);
-
-    const [events, setEvents] = useState({
-        '2025-02-03': [{time: '10:00', title: 'Edzes: joga'}, {time: '14:00', title: 'Edzes: szaladas'}],
-        '2025-02-10': [{time: '10:00', title: 'Edzes: joga'}, {time: '14:00', title: 'Edzes: szaladas'}],
-    })
-
- 
 
     const fetchWeatherData = (latitude, longitude) => {
         fetch(`https://api.weatherapi.com/v1/current.json?key=e0deebe2af12488d89c123118250302&q=${latitude},${longitude}`)
@@ -42,64 +44,27 @@ const CalendarScreen = () => {
             .catch(error => console.log(error));
     };
 
-    const requestLocationPermission = async () => {
-        if(Platform.OS === 'android'){
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-            );
-            if(granted === PermissionsAndroid.RESULTS.GRANTED){
-                console.log("Location permission granted");
-                getUserLocation();
-            }else{
-                useComposedEventHandler.log("Location permission denied");
-            }
-        } else{
-            getUserLocation();
-        }
-    };
+    // const requestLocationPermission = async () => {
+    //     if(Platform.OS === 'android'){
+    //         const granted = await PermissionsAndroid.request(
+    //             PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+    //         );
+    //         if(granted === PermissionsAndroid.RESULTS.GRANTED){
+    //             console.log("Location permission granted");
+    //             getUserLocation();
+    //         }else{
+    //             useComposedEventHandler.log("Location permission denied");
+    //         }
+    //     } else{
+    //         getUserLocation();
+    //     }
+    // };
 
-    const getUserLocation = () => {
-        Geolocation.getCurrentPosition(
-            position => {
-                const {latitude, longitude} = position.coords;
-                console.log("User location: ", latitude, longitude);
-                setUserLocation({latitude, longitude});
-                generateRandomRoute({latitude, longitude});
-            },
-            error => console.log(error.message),
-            {enableHighAccuracy: true, timeout: 20000, maximumAge: 1000}
-        );
-    };
 
-    const generateRandomRoute = (userLocation) => {
-        if(userLocation){
-        const randomDistance = (Math.random() * 10 +1).toFixed(1);
-        const startCoords = userLocation;
 
-        const endCoords = {
-            latitude: userLocation.latitude + (Math.random() * 0.1 - 0.05), 
-            longitude: userLocation.longitude + (Math.random() * 0.1 - 0.05) 
-        };
-
-        const mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&markers=color:red%7Clabel:S%7C${startCoords.latitude},${startCoords.longitude}&markers=color:red%7Clabel:E%7C${endCoords.lat},${endCoords.lng}&path=color:0x0000ff%7C${startCoords.latitude},${startCoords.longitude}%7C${endCoords.lat},${endCoords.lng}&key=AIzaSyAGcodZd433BbtGC9oCVIMZlOuHuBPJ8Gk`;
-
-        console.log("Map Image URL:", mapImageUrl);
-
-        const randomRoute = {
-            id: Math.random().toString(),
-            distance: randomDistance,
-            routeImage: mapImageUrl, 
-            description: `Run ${randomDistance} km `,
-        };
-        setRoutes(prevRoutes => [randomRoute, ...prevRoutes]);
-    }else{
-        console.log("User location not available");
-    }
-    };
-
-    useEffect(() => {
-        requestLocationPermission();
-    }, []);
+    // useEffect(() => {
+    //     requestLocationPermission();
+    // }, []);
 
     const onDayPress = (day) => {
         setSelectedDate(day.dateString);
@@ -152,54 +117,65 @@ const CalendarScreen = () => {
         }
     };
 
-    const renderRouteCard = ({ item }) => (
-        <View style={styles.card}>
-            <Image source={{ uri: item.routeImage }} style={styles.cardImage} />
-            <Text style={styles.cardTitle}>Run {item.distance} km</Text>
-            <Text>{item.description}</Text>
-            <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>Start</Text>
-            </TouchableOpacity>
-        </View>
-    );
+    const PickProgessImage = async (imageNumber) => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4,3],
+            quality: 1,
+        });
+
+        if(!result.canceled){
+            if(imageNumber === 1){
+                setImage1(result.assets[0].uri);
+                setShowDatePicker1(true);
+            }else{
+                setImage2(result.assets[0].uri);
+                setShowDatePicker2(true);
+            }
+        }
+    };
+
+    const handleDateChange = (event, selectedDate, imageNumber) => {
+        const currentDate = selectedDate || (imageNumber === 1 ? uploadDate1 : uploadDate2 || new Date())
+        if (imageNumber === 1)
+        {
+            setUploadDate1(currentDate);
+        }else{
+            setUploadDate2(currentDate);
+        }
+    };
+
+ 
     return (
+      <ScrollView contentContainerStyle={styles.scrollViewContainer} keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
             <View style={styles.calendarContainer}>
                 <Calendar
                 markedDates={{
-                    [selectedDate]: {selected: true, selectedColor: 'blue', selectedTextColor: 'white'}
+                    [selectedDate]: {selected: true, selectedColor: 'purple', selectedTextColor: 'white'}
                 }}
                     onDayPress={ onDayPress}
                     style={styles.calednar}
                 />
+            <SafeAreaView style={styles.agenda}>
+                <Agenda 
+                    items={{
+                        '2025-03-15': [{name: 'Run', data:'Outdoor Running'}],
+                        '2025-03-17': [{name: 'Walking', data:'Outdoor walking'}],
+                    }}
 
-            <View style={styles.agenda}>
-                {selectedDate && (
-                    <View>
-                        <Text style={styles.dateText}>Selected Date: {selectedDate}</Text>
+                    renderItem={(item, isFirst) =>(
+                        <TouchableOpacity style={styles.item}>
+                            <Text style={styles.itemText}>{item.name}</Text>
+                            <Text style={styles.itemText}>{item.data}</Text>
 
-                        <RNPickerSelect
-                            onValueChange={handleEventChange}
-                            items={getEventOptions()}
-                            placeholder={{label: '...', value: null}}
-                            value={selectedEvent}
-                            styles={pickerStyles}
-                        />
-                    {selectedEvent && (
-                        <Text style={styles.eventText}>Kivalasztott esemeny: {selectedEvent}</Text>
-                    )} 
-                    
-                    </View>
-                )}
-            </View>
-        <View style={{flex: 1}} >
-            <FlatList
-                data={routes}
-                renderItem={renderRouteCard}
-                keyExtractor={(item) => item.id}
-                style={styles.list}
-                showVerticalScrollIndicator={false} />
-        </View>
+                        </TouchableOpacity>
+                    ) }
+                />
+            </SafeAreaView>
+
+    
         <Modal visible={modalVisible} animationType="slide">
             <View style={styles.modalContainer}>
                 <Text style={styles.modalTitle}> {selectedDate}</Text>
@@ -230,31 +206,67 @@ const CalendarScreen = () => {
 
         </Modal>
 
-         </View>
-         
-            <Text style={styles.title}>Random Running Routes</Text>
-            <Button title="Generated Routes" onPress={generateRandomRoute} />
+        <View style={styles.progressCard}>
+            <View style={styles.imageContainer}>
+                <TouchableOpacity style={styles.uploadButton} onPress={() => PickProgessImage(1)}>
+                    {image1 ? (
+                        <Image source={{uri: image1}} style={styles.image}/>
+                    ):(
+                        <Text>Upload Image</Text>
+                       
+                    )}
+                    </TouchableOpacity>
+                    {uploadDate1 && <Text>{moment(uploadDate1).format('YYYY-MM-DD HH:mm')}</Text>}
+                    {showDatePicker1 && (
+                        <DateTimePicker 
+                            testId="dateTimePicker1"
+                            value={uploadDate1 || new Date()}
+                            mode="datetime"
+                            is24Hour={ture}
+                            display="default"
+                            onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 1)} />
+                    )}
+                
+            </View>
 
-            <ScrollView horizontal style={styles.cardContainer}>
-                 <FlatList
-                     data={routes}
-                   renderItem={renderRouteCard}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                 showsHorizontalScrollIndicator={false}
-                />
-            </ScrollView>
+            <View style={styles.imageContainer}>
+                <TouchableOpacity style={styles.uploadButton} onPress={() => PickProgessImage(2)}>
+                    {image2 ? (
+                        <Image source={{uri: image2}} style={styles.image}/>
+                    ):(
+                        <Text>Upload Image</Text>
+                       
+                    )}
+                    </TouchableOpacity>
+                    {uploadDate2 && <Text>{moment(uploadDate2).format('YYYY-MM-DD HH:mm')}</Text>}
+                    {showDatePicker2 && (
+                        <DateTimePicker 
+                            testId="dateTimePicker2"
+                            value={uploadDate2 || new Date()}
+                            mode="datetime"
+                            is24Hour={ture}
+                            display="default"
+                            onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 2)} />
+                    )}
+                
+            </View>
+            <Text>Let's track your progress</Text>
+         </View>
+
+         </View>
         </View>
+        </ScrollView>  
     );
 };
+
 
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
-        alignItems: 'center',
-        justifyContent: 'center',
+        backgroundColor: "#f0f0f0",
+        padding: 20,
+        justifyContent: 'space-between',
     },
     modalContainer: {
         flex: 1,
@@ -347,12 +359,14 @@ const styles = StyleSheet.create({
     calendarContainer: {
         position: 'absolute',
         top: 10,
-        right: 10,
-        width: 300,
+        width: 400,
+        padding: 30,
+        marginBottom:20,
     },
     calednar: {
         borderWidth: 1,
-        borderColor: 'gray',
+        borderColor: '#ccc',
+        borderRadius: 10,
     },
     list: {
         flex: 1,
@@ -375,6 +389,46 @@ const styles = StyleSheet.create({
     emoji: {
         fontSize: 20,
     },
+    itemText:{
+        color: 'black',
+        fontSize: 14,
+    },
+    item: {
+        backgroundColor: '#CBC3E3',
+        flex: 1,
+        borderRadius: 5,
+        padding: 10,
+        marginRight: 10,
+        marginTop: 25,
+        paddingBottom: 20,
+    },
+    agenda: {
+        marginTop: 15,
+    },
+    progressCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        padding: 20,
+    },
+    imageContainer: {
+        alignItems: 'center',
+    },
+    uploadButton: {
+        height: 150,
+        width: 150,
+        backgroundColor: '#6200ee',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    image:{
+        width: 150,
+        height: 150,
+    },
+    scrollViewContainer:{
+        flexGrow: 1,
+    },
+   
 });
 
 export default CalendarScreen;

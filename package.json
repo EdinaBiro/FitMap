@@ -12,6 +12,7 @@
     "@cometchat-pro/react-native-chat": "^3.0.13",
     "@expo/config-plugins": "^9.0.16",
     "@react-native-async-storage/async-storage": "^1.24.0",
+    "@react-native-community/datetimepicker": "^8.3.0",
     "@react-native-community/geolocation": "^3.4.0",
     "@react-native-community/masked-view": "^0.1.11",
     "@react-native-firebase/app": "^21.12.0",

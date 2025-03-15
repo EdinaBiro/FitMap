@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Dimensions, Button, TouchableOpacity, ActivityIndicator} from 'react-native'
+import { StyleSheet, Text, View, Dimensions, Button, TouchableOpacity, ActivityIndicator,FlatList, ScrollView} from 'react-native'
 import React, {useState, useEffect} from 'react';
 import MapView, {Marker} from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -9,6 +9,8 @@ const HomeScreen = () => {
   const [mapRegion, setMapRegion] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [routes, setRoutes] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
 
   const navigation = useNavigation();
 
@@ -32,6 +34,55 @@ const HomeScreen = () => {
 
     console.log(location.coords.longitude,location.coords.latitude);
   }
+
+//   const getUserLocation = () => {
+//     Geolocation.getCurrentPosition(
+//         position => {
+//             const {latitude, longitude} = position.coords;
+//             console.log("User location: ", latitude, longitude);
+//             setUserLocation({latitude, longitude});
+//             generateRandomRoute({latitude, longitude});
+//         },
+//         error => console.log(error.message),
+//         {enableHighAccuracy: true, timeout: 20000, maximumAge: 1000}
+//     );
+// };
+ const generateRandomRoute = (userLocation) => {
+        if(userLocation){
+        const randomDistance = (Math.random() * 10 +1).toFixed(1);
+        const startCoords = userLocation;
+
+        const endCoords = {
+            latitude: userLocation.latitude + (Math.random() * 0.1 - 0.05), 
+            longitude: userLocation.longitude + (Math.random() * 0.1 - 0.05) 
+        };
+
+        const mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&markers=color:red%7Clabel:S%7C${startCoords.latitude},${startCoords.longitude}&markers=color:red%7Clabel:E%7C${endCoords.lat},${endCoords.lng}&path=color:0x0000ff%7C${startCoords.latitude},${startCoords.longitude}%7C${endCoords.lat},${endCoords.lng}&key=AIzaSyAGcodZd433BbtGC9oCVIMZlOuHuBPJ8Gk`;
+
+        console.log("Map Image URL:", mapImageUrl);
+
+        const randomRoute = {
+            id: Math.random().toString(),
+            distance: randomDistance,
+            routeImage: mapImageUrl, 
+            description: `Run ${randomDistance} km `,
+        };
+        setRoutes(prevRoutes => [randomRoute, ...prevRoutes]);
+    }else{
+        console.log("User location not available");
+    }
+    };
+
+    const renderRouteCard = ({ item }) => (
+      <View style={styles.card}>
+          <Image source={{ uri: item.routeImage }} style={styles.cardImage} />
+          <Text style={styles.cardTitle}>Run {item.distance} km</Text>
+          <Text>{item.description}</Text>
+          <TouchableOpacity style={styles.button}>
+              <Text style={styles.buttonText}>Start</Text>
+          </TouchableOpacity>
+      </View>
+  );
 
   useEffect( () => {
     userLocaion();
@@ -59,9 +110,34 @@ const HomeScreen = () => {
             <Text style={styles.buttonText}>Workout</Text>
         </TouchableOpacity>
       </View>
+
+
+          <View style={{flex: 1}} >
+                  <FlatList
+                      data={routes}
+                      renderItem={renderRouteCard}
+                      keyExtractor={(item) => item.id}
+                      style={styles.list}
+                      showVerticalScrollIndicator={false} />
+              </View>
+
+              <Text style={styles.title}>Random Running Routes</Text>
+                          <Button title="Generated Routes" onPress={generateRandomRoute} />
+              
+                          <ScrollView horizontal style={styles.cardContainer}>
+                               <FlatList
+                                  data={routes}
+                                 renderItem={renderRouteCard}
+                                  keyExtractor={(item) => item.id}
+                                  horizontal
+                               showsHorizontalScrollIndicator={false}
+                              />
+                            </ScrollView>
       </>
       )}
     </View> 
+
+    
   );
 };
 
