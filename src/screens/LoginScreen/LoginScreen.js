@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View, Image, useWindowDimensions, ScrollView, TouchableOpacity, Platform} from 'react-native'
 import Logo from '../../../assets/images/logo.png';
-import React from 'react';
 import CustomInput from '../../components/CustomInput';
 import {useState, useEffect} from 'react';
 import CustomButton from '../../components/CustomButton/CustomButton';
@@ -90,37 +89,44 @@ const LoginScreen = () => {
     }
   }
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
     const {height} = useWindowDimensions();
     
 
-    const {control,handleSubmit,formState: {errors}} = useForm();
+    const {control,handleSubmit,watch, formState: {errors}} = useForm();
 
 
     const onLoginPressed = () => {
-      //validate user
 
       navigation.navigate('CalendarScreen');
       handleLogin();
     }
 
-    const handleLogin = () => {
-      console.warn('Logged in');
-      console.log('Navigating to CalendarScreen');
-      navigation.navigate('CalendarScreen');
-    }
+    const handleLogin = async () => {
 
-    const handleSignUp = () => {
-      auth 
-      .createUserWithEmailAndPassword(email,password)
-      .then(userCredentials => {
-        const user = userCredentials.user;
-        console.log(user.email);
-      })
-      .catch(error => alert(error.message))
-    }
+      const email= watch('email');
+      const password = watch('password');
+
+      console.log("email: ", email);
+      console.log("password: ", password);
+
+
+      if(!email.trim() || !password.trim()){
+        console.log("Enter email and password");
+        alert("Please enter email and password");
+        return;
+
+      }
+      try{
+        await auth()
+        .signInWithEmailAndPassword(email,password) 
+      }
+      catch(error) {
+       
+          console.log(error);
+        }
+    };
+
+
 
     const onForgotPasswordPressed = () => {
 
@@ -134,7 +140,7 @@ const LoginScreen = () => {
 
     useEffect(() => {
       GoogleSignin.configure({
-        webClientId: '168328468027-nck4olakkh9mfbgdfrhehl46igrm952l.apps.googleusercontent.com',
+        webClientId: '1168328468027-nck4olakkh9mfbgdfrhehl46igrm952l.apps.googleusercontent.com',
         offlineAccess: true,
     });
       const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
@@ -161,7 +167,7 @@ const LoginScreen = () => {
 
           console.log("Successfull Google Login");
 
-          navigation.navigate('CalendarScreen');
+          navigation.navigate('HomeScreen');
       }catch(error){
         console.error(error.message, error.code);
         alert(error.message);
@@ -210,8 +216,6 @@ const LoginScreen = () => {
         name="email" 
         placeholder="Email" 
         control={control} 
-        value={email}
-        onChangeText={text => setEmail(text)}
         rules={{required: 'Email is required'}}
          />
   
@@ -220,13 +224,12 @@ const LoginScreen = () => {
         placeholder="Password" 
         secureTextEntry={true}
         control={control}
-        value={password}
-        onChangeText={text => setPassword(text)}
         rules={{required: 'Password is required',minLength: {value:3, message:'Password should be minimum ${value} characters long',maxLength:  {value:15, message:'Password should be maximum ${value} characters long'  }}}}
         />
   
   
-        <CustomButton text="Log in" onPress={handleSignUp }/>
+  
+        <CustomButton text="Log in" onPress={handleLogin }/>
        
   
         <CustomButton 

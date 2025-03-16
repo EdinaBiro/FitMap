@@ -5,8 +5,10 @@ import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
 import SocialSignInButtons from '../../components/SocialSignInButtons';
 import { useNavigation } from '@react-navigation/native';
-
+import auth from '@react-native-firebase/auth';
 import { useForm } from 'react-hook-form';
+import axios from 'axios';
+import { getIdToken } from 'firebase/auth';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
 
@@ -17,14 +19,37 @@ const SignUpScreen = () => {
     const pwd = watch('password');
     const navigation = useNavigation();
 
-    const onRegisterPressed = () => {
-      navigation.navigate("LoginScreen");
-    }
+    const onRegisterPressed = async () => {
 
-    const onSignInPressed = () => {
-      navigation.navigate("LoginScreen");
+      const email = watch('email');
+      const password = watch('password');
 
-    }
+        if(!email.trim() || !password.trim()){
+          console.log("Enter email and password");
+          alert("Please enter email and password");
+          return;
+  
+        }
+        try{
+        const userCredential = await auth().createUserWithEmailAndPassword(email,password)
+        
+
+      }  catch(error){
+        if(error.code === 'auth/email-already-in-use'){
+          console.log('That email address is already in use!');
+        }
+        if(error.code === 'auth/invalid-email'){
+          console.log('That email address is invalid!');
+        }
+        console.error(error);
+      }  
+      };
+
+
+      const onSignInPressed = () => {
+        navigation.navigate('LoginScreen');
+      }
+
 
     const onPrivacyPressed = () =>{
       console.warn("Privacy");
@@ -50,7 +75,7 @@ const SignUpScreen = () => {
       name="email"
       placeholder="Email" 
       control={control}
-      rules = {{pattern:{value: EMAIL_REGEX, messag: 'Email is invalid'}}}
+      rules = {{pattern:{value: EMAIL_REGEX, message: 'Email is invalid'}}}
       />
 
       <CustomInput 
