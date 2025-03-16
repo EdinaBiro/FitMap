@@ -11,6 +11,7 @@ const ProfileScreen = () => {
   const [bmi, setBmi] = useState(null);
   const [hoverText, setHoverText] = useState('');
   const [activityLevel, setActivityLevel] = useState('1');
+  const [userId, setUserId] = useState(null);
   const [profile,setProfile] = useState({
     age: '',
     gender: '',
@@ -43,7 +44,7 @@ const ProfileScreen = () => {
         setProfile(data);
       }
     }) ();
-  }, []);
+  }, [userId]);
 
   useEffect( () => {
     calculateBMI();
@@ -55,6 +56,9 @@ const ProfileScreen = () => {
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
+    if(!isEditing){
+      setHoverText('');
+    }
   };
 
   const validateInput = () => {
@@ -131,8 +135,11 @@ const ProfileScreen = () => {
   };
 
   const handleActivityLevelChange = (level) => {
-    setProfile({...profile, activityLevel: level});
+    if(isEditing){
+      setProfile({...profile, activityLevel: level});
     setHoverText(activityTexts[level]);
+    }
+    
   };
 
 
