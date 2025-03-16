@@ -92,15 +92,6 @@ const CalendarScreen = () => {
          : [];
     };
 
-    const addWorkoutToAgenda = () => {
-        const newWorkout = {
-            date: selectedDate,
-            time: workoutTime,
-            description: workoutDescription,
-        };
-
-        setWorkouts(prev => [...prev,newWorkout]);
-    }
 
     const pickImage = async() => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -126,26 +117,22 @@ const CalendarScreen = () => {
         });
 
         if(!result.canceled){
+
+            const currentTime = new Date();
+
             if(imageNumber === 1){
                 setImage1(result.assets[0].uri);
-                setShowDatePicker1(true);
+                //setShowDatePicker1(true);
+                setUploadDate1(currentTime);
             }else{
                 setImage2(result.assets[0].uri);
-                setShowDatePicker2(true);
+                //setShowDatePicker2(true);
+                setUploadDate2(currentTime);
             }
         }
     };
 
-    const handleDateChange = (event, selectedDate, imageNumber) => {
-        const currentDate = selectedDate || (imageNumber === 1 ? uploadDate1 : uploadDate2 || new Date())
-        if (imageNumber === 1)
-        {
-            setUploadDate1(currentDate);
-        }else{
-            setUploadDate2(currentDate);
-        }
-    };
-
+   
  
     return (
       <ScrollView contentContainerStyle={styles.scrollViewContainer} keyboardShouldPersistTaps="handled">
@@ -206,6 +193,9 @@ const CalendarScreen = () => {
 
         </Modal>
 
+        <Text style={styles.textProgress}>Let's track your progress</Text>
+        <Text style={styles.subtitle}>See the changes week by week</Text>
+
         <View style={styles.progressCard}>
             <View style={styles.imageContainer}>
                 <TouchableOpacity style={styles.uploadButton} onPress={() => PickProgessImage(1)}>
@@ -216,18 +206,20 @@ const CalendarScreen = () => {
                        
                     )}
                     </TouchableOpacity>
-                    {uploadDate1 && <Text>{moment(uploadDate1).format('YYYY-MM-DD HH:mm')}</Text>}
+                    {uploadDate1 && <Text style={styles.dateText}>{moment(uploadDate1).format('YYYY-MM-DD HH:mm')}</Text>}
                     {showDatePicker1 && (
                         <DateTimePicker 
                             testId="dateTimePicker1"
                             value={uploadDate1 || new Date()}
                             mode="datetime"
-                            is24Hour={ture}
+                            is24Hour={true}
                             display="default"
                             onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 1)} />
                     )}
                 
             </View>
+
+            
 
             <View style={styles.imageContainer}>
                 <TouchableOpacity style={styles.uploadButton} onPress={() => PickProgessImage(2)}>
@@ -238,19 +230,19 @@ const CalendarScreen = () => {
                        
                     )}
                     </TouchableOpacity>
-                    {uploadDate2 && <Text>{moment(uploadDate2).format('YYYY-MM-DD HH:mm')}</Text>}
+                    {uploadDate2 && <Text style={styles.dateText}>{moment(uploadDate2).format('YYYY-MM-DD HH:mm')}</Text>}
                     {showDatePicker2 && (
                         <DateTimePicker 
                             testId="dateTimePicker2"
                             value={uploadDate2 || new Date()}
                             mode="datetime"
-                            is24Hour={ture}
+                            is24Hour={true}
                             display="default"
                             onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 2)} />
                     )}
                 
             </View>
-            <Text>Let's track your progress</Text>
+            
          </View>
 
          </View>
@@ -267,6 +259,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#f0f0f0",
         padding: 20,
         justifyContent: 'space-between',
+        alignItems: 'center',
     },
     modalContainer: {
         flex: 1,
@@ -357,7 +350,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     calendarContainer: {
-        position: 'absolute',
+
         top: 10,
         width: 400,
         padding: 30,
@@ -371,7 +364,7 @@ const styles = StyleSheet.create({
     list: {
         flex: 1,
         marginTop: 100,
-        witdh: '100%',
+        width: '100%',
     },
     weatherText: {
         fontSize: 16,
@@ -412,6 +405,7 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         alignItems: 'center',
+        width: '45%',
     },
     uploadButton: {
         height: 150,
@@ -420,6 +414,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 10,
+        //borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
     image:{
         width: 150,
@@ -428,7 +425,21 @@ const styles = StyleSheet.create({
     scrollViewContainer:{
         flexGrow: 1,
     },
-   
+   textProgress: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 20,
+    color: '#333',
+   },
+   subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+   },
+   dateText: {
+    fontSize: 14,
+    color: '#777',
+   },
 });
 
 export default CalendarScreen;
