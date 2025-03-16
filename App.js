@@ -1,5 +1,5 @@
 import { SafeAreaView, StyleSheet, Text, useColorScheme, View , ScrollView} from 'react-native';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, createContext} from 'react';
 import Navigation from './src/navigation/index';
 import { AppRegistry } from 'react-native';
 import { name as appName } from './app.json';
@@ -10,6 +10,7 @@ import { ThemeProvider } from './src/drawerNav/ThemeContext';
 import { navigationRef } from './src/navigation/NavigationRef';
 import auth from '@react-native-firebase/auth';
 
+ export const AuthContext = createContext();
 const App = () => {
 
   const [user, setUser] = useState(null);
@@ -24,11 +25,14 @@ const App = () => {
   }, []);
 
   return (
+     <AuthContext.Provider value={{ user }}>
+         
         <ThemeProvider>
           <NavigationContainer ref={navigationRef}>
             {user ? <DrawerNavigation/> : <Navigation />}
           </NavigationContainer>
         </ThemeProvider>
+        </AuthContext.Provider>
   );
 };
 
