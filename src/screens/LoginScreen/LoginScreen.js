@@ -31,7 +31,10 @@ const LoginScreen = () => {
     setUser(user);
 
     if(user) {
-      navigation.navigate('CalendarScreen');
+      setTimeout(() => {
+        navigation.navigate('CalendarScreen');
+      },1500);
+      
     }
     if (initializing) setInitializing(false);
   }
@@ -85,7 +88,9 @@ const LoginScreen = () => {
     await auth().signInWithCredential(facebookCredential);
 
     if(auth().currentUser) {
-      navigation.navigate('CalendarScreen');
+      setTimeout(() => {
+        navigation.navigate('CalendarScreen');
+      },1500);
     }
   }
 
@@ -97,7 +102,9 @@ const LoginScreen = () => {
 
     const onLoginPressed = () => {
 
-      navigation.navigate('CalendarScreen');
+      setTimeout(() => {
+        navigation.navigate('CalendarScreen');
+      },1500);
       handleLogin();
     }
 
@@ -119,6 +126,9 @@ const LoginScreen = () => {
       try{
         await auth()
         .signInWithEmailAndPassword(email,password) 
+        setTimeout(() => {
+          navigation.navigate('CalendarScreen');
+        },1500);
       }
       catch(error) {
        
@@ -197,7 +207,9 @@ const LoginScreen = () => {
       //navigation.navigate('HomeScreen');
 
       if(auth().currentUser) {
-        navigation.navigate('CalendarScreen');
+        setTimeout(() => {
+          navigation.navigate('CalendarScreen');
+        },1500);
       }
     }
     if (initializing) return null;

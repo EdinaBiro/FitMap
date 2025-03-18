@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, ImageBackground} from 'react-native'
+import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, ImageBackground, ActivityIndicator} from 'react-native'
 import React, {useState, useEffect} from 'react';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import { ScrollView } from 'react-native-gesture-handler';
-
+import auth from '@react-native-firebase/auth';
+import { useIsFocused } from '@react-navigation/native';
 
 
 const ProfileScreen = () => {
@@ -12,14 +13,10 @@ const ProfileScreen = () => {
   const [hoverText, setHoverText] = useState('');
   const [activityLevel, setActivityLevel] = useState('1');
   const [userId, setUserId] = useState(null);
-  const [profile,setProfile] = useState({
-    age: '',
-    gender: '',
-    height: '',
-    weight: '',
-    activityLevel: '1',
-    profileImage: 'https://via.placeholder.com/80'
-  });
+  const [profileImage, setProfileImage] = useState(null);
+  const [profile,setProfile] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const isFocused = useIsFocused();
 
   const activityTexts = {
     1: 'Sedentary - Little or no exercise',
@@ -29,19 +26,32 @@ const ProfileScreen = () => {
     5: 'Super Active - Very hard exercise/sports & physical job or training twice a day'
   };
 
+  useEffect(() => {
+    const chechAuth = async () => {
+      setIsLoading(true);
+     
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const user = auth().currentUser;
+      console.log("Auth- check: Current user:", user);
+
+      if(user){
+        setUserId(user.uid);
+      }else{
+        console.log("No user is logged in");
+        alert("You must be logge din to acces your profile");
+      }
+      setIsLoading(false);
+    };
+
+    chechAuth();
+  }, [isFocused]);
+
   useEffect( () => {
     (async () => {
       const {status: cameraStatus} = await ImagePicker.requestCameraPermissionsAsync();
       const { status: mediaStatus} = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if(cameraStatus !== 'granted' || mediaStatus !== 'granted'){
         alert('Prmission to access media library and camera is required');
-      }
-
-      if(userId){
-        const response = await fetch(`http://127.0.0.1:8000/profile/${userId}`);
-        console.log("Response status:", response.status);
-        const data = await response.json();
-        setProfile(data);
       }
     }) ();
   }, [userId]);
@@ -51,6 +61,10 @@ const ProfileScreen = () => {
   }, [profile.height, profile.weight]);
 
   const handleChange = (key,value) => {
+    const numericFileds =['age', 'height', 'weight', 'activityLevel'];
+    if(numericFileds.includes(key) && value != ''){
+      value=Number(value);
+    }
     setProfile({...profile, [key]: value});
   };
 
@@ -70,45 +84,135 @@ const ProfileScreen = () => {
     return true;
   };
 
-  const handleSave = async() =>  {
-    if(validateInput()){
+  useEffect(() => {
+    const fetchProfile = async () => {
+
+      if(!userId) return;
+      setIsLoading(true);
+      
       try{
-        const url= userId ? `http://127.0.0.1:8000/profile/${userId}` : `http://127.0.0.1:8000/profile`;
-        const method = userId ? 'PUT' : 'POST';
+        const response = await fetch(`http://192.168.1.7:8000/profile/user/${userId}`);
+        console.log("Profile response status: ", response.status);
+        if(response.ok){
+          const data = await response.json();
+          setProfile({
+            id: data.user_id,
+            age:data.age?.toString() || '',
+            height: data.height?.toString() || '',
+            weight: data.weight?.toString() || '',
+            gender: data.gender || 'female',
+            activityLevel: data.activity_level || 1,
+            profileImage: data.profile_image || null
+          });
+        }else{
+          console.log("No existing profile found, will creae one when saving");
+          setProfile({
+            age: '',
+            height: '',
+            weight: '',
+            gender: 'female',
+            activityLevel: 1,
+            profileImage: null
+        });
+        }
+      }catch(error){
+        console.error("Error fetching profile:" ,error);
+      }finally{
+        setIsLoading(false);
+      }
+   
+    };
+    fetchProfile();
+  },[userId]);
+
+  const handleSave = async() =>  {
+    if(!validateInput()) return;
+
+      try{
+
+        const user = auth().currentUser;
+
+        if(!user){
+          alert("User id is not available. Please make sure you're logged in");
+          return;
+        }
+        const currentUserId = user.uid;
+
+        const baseUrl= `http://192.168.1.7:8000`;
+        let url;
+        let method;
+
+        if(profile.id){
+
+          url=`${baseUrl}/profile/${profile.id}`;
+          method='PUT';
+
+        }else{
+
+          url=`${baseUrl}/profile/create_profile`;
+          method='POST';
+
+        }
+
+        const activityLevelValue = typeof profile.activityLevel === 'string'
+            ? parseInt(profile.activityLevel)
+            : profile.activityLevel;
+
+        const dataToSend = {
+            profile_image: profile.profileImage,
+            age: Number(profile.age),
+            height: Number(profile.height),
+            weight: Number(profile.weight),
+            gender: profile.gender,
+            activity_level: activityLevelValue || 1,
+            user_id: currentUserId
+        };
+
+        console.log("Sending data:", JSON.stringify(dataToSend));
 
         const response = await fetch(url, {
           method : method,
           headers: {
             'Content-Type' : 'application/json'
           },
-          body: JSON.stringify(profile)
+          body: JSON.stringify(dataToSend)
 
         });
 
         if(response.ok){
           const data = await response.json();
-          setProfile(data);
-          if(!userId){
-            setUserId(data.id);
-          }
-          toggleEdit();
+          setProfile({
+            id: data.id || data.user_id,
+            age: data.age?.toString() || '',
+            height: data.height?.toString() || '',
+            weight: data.weight?.toString() || '',
+            gender: data.gender || 'female',
+            activityLevel: data.activity_level || 1,
+            profileImage: data.profile_image || null
+          });
           alert("Profile saved successfully");
+          setIsEditing(false);
+          calculateBMI();
         }else{
           const errorData = await response.json();
-          alert("Error savong profile: ${errorData.detail || response.statusText} ")
+          const errorMessage = typeof errorData.detail === 'string'
+            ? errorData.detail
+            : JSON.stringify(errorData.detail);
+          alert(`Error saving profile: ${errorMessage}`)
           console.error("Error details:", errorData);
         }
 
       }catch(error){
-        alert("An unexpected error occured: ${error.message}")
+        alert(`An unexpected error occured: ${error.message}`)
         console.error("Fetch error:", error);
       }
-      toggleEdit();
+      
       calculateBMI();
     }
-  }
+  
 
   const pickImage = async () => {
+    if(!isEditing) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Image,
       allowsEditing: true,
@@ -120,6 +224,7 @@ const ProfileScreen = () => {
       setProfile({...profile, profileImage: result.assets[0].uri});
     }
   }
+
 
   const calculateBMI = () => {
     const {height, weight} = profile;
@@ -136,15 +241,23 @@ const ProfileScreen = () => {
 
   const handleActivityLevelChange = (level) => {
     if(isEditing){
-      setProfile({...profile, activityLevel: level});
-    setHoverText(activityTexts[level]);
+      const levelNum = parseInt(level);
+      setProfile({...profile, activityLevel: levelNum});
+      setHoverText(activityTexts[level]);
     }
-    
   };
 
 
 
   return (
+    <>
+    {isLoading ? (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#555"/>
+        <Text>Loading profile...</Text>
+      </View>
+    ):(
+    
 
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.profileContainer}>
@@ -156,7 +269,8 @@ const ProfileScreen = () => {
       <View style={styles.overlay}>
       <View style={styles.card}>
         <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
-          <Image source={{uri: profile.profileImage}} style={styles.profileImage} />
+          <Image 
+            source={profile.profileImage ? {uri: profile.profileImage} : require('../../../assets/images/default-avatar.jpg')} style={styles.profileImage} />
         </TouchableOpacity>
 
 
@@ -242,8 +356,11 @@ const ProfileScreen = () => {
       </View>
       </View>
       </ScrollView>
-  )
+    )}
+  </>
+  );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -405,6 +522,9 @@ hoverText: {
   fontStyle: 'italic',
   color: '#888',
   marginTop: 10,
+},
+loadingContainer: {
+
 }
 
 
