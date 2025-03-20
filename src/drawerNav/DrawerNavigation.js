@@ -4,6 +4,7 @@ import { createDrawerNavigator} from '@react-navigation/drawer';
 import {Ionicons} from '@expo/vector-icons';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import CustomDrawerContent from './CustomDrawerContent';
+import GymScreen from '../screens/GymScreen/GymScreen';
 
 
 const Drawer = createDrawerNavigator();
@@ -58,6 +59,13 @@ const DrawerNavigation = () => {
         <Drawer.Screen
         name="HomeTabs"
         component={BottomNavigation}
+        options={{ title: '', drawerItemStyle: {display: 'none'}}}>
+
+        </Drawer.Screen>
+
+        <Drawer.Screen
+        name="GymScreen"
+        component={GymScreen}
         options={{ title: '', drawerItemStyle: {display: 'none'}}}>
 
         </Drawer.Screen>
