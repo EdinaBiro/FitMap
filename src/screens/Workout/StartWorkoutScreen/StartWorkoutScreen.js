@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef} from 'react';
 import { useNavigation, useRoute} from '@react-navigation/native';
 import Geolocation from 'react-native-geolocation-service';
 import MapView, {Polyline} from 'react-native-maps';
-import { isDynamicPart } from 'expo-router/build/fork/getPathFromState-forks';
+import {PROVIDER_GOOGLE} from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
 import  Modal from 'react-native-modal';
 
@@ -113,36 +113,47 @@ const StartWorkoutScreen = () => {
         setIsWorkoutActive(true);
 
         Geolocation.watchPosition(
-            (newLocation) => {
-                setLocation((prevLocation) => {
-                    if(prevLocation){
-                        const distanceIncrement = calculateDistance(prevLocation, newLocation.coords);
-                        setDistance((prevDistance) => prevDistance + distanceIncrement);
-                        setPace(calculatePace(distance + distanceIncrement));
-                        setCalories(calculateCalories(distance + distanceIncrement));
-                    }
-                    return newLocation?.coords ?? prevLocation;
-                });
+            (newLocationData) => {
+                const newCoords = newLocationData.coords;
 
-                setLocationHistory((prev) => [...prev, newLocation.coords]);
+                setLocation((prevLocation) => {
+                    if(prevLocation && !isPaused){
+                        const distanceIncrement = calculateDistance(prevLocation, newCoords);
+                        setDistance(prevDistance =>{ 
+                            const newDistance = prevDistance+distanceIncrement;
+                            
+                            setPace(calculatePace(newDistance,duration));
+                            setCalories(calculateCalories(newDistance));
+                    
+                    return newDistance;
+                });
+            }
+
+                return newCoords;
               
                     
-                },
+                });
+            if(!isPaused && newCoords && newCoords.latitude && newCoords.longitude){
+                setLocationHistory(prev => [...prev, newCoords]);
+            }
+        },
             
-            (error) => {
-                console.log(error);
-            },
+    
             {
                 enableHighAccuracy: true,
                 distanceFilter: 1,
                 interval: 1000,
                 fastestInterval: 500,
             }
-            
         );
+            
     };
 
     const calculateDistance = (startCoords, endCoords) => {
+
+        if(!startCoords || !endCoords || !startCoords.latitude && !startCoords.longitude && !endCoords.latitude || !endCoords.longitude){
+            return 0;
+        }
         const { latitude: lat1, longitude: lon1 } = startCoords;
         const { latitude: lat2, longitude: lon2 } = endCoords;
 
@@ -161,14 +172,58 @@ const StartWorkoutScreen = () => {
         return distance / 1000; // in kilometers
     };
 
-    const calculatePace = (distance) => {
-        return distance > 0  && distance > 0 ? ((duration / distance) / 60).toFixed(2) : 0;
+    const calculatePace = (distance, currentDuration) => {
+        if(distance <=0  || currentDuration <=0) return 0;
+
+        const paceValue = (currentDuration / 60) / distance; 
+
+        return isNaN(paceValue) ? "0.00" : paceValue.toFixed(2);
     };
 
-    const calculateCalories = (distance) => {
-        const weight = 70;
-        const caloriesPerKm = 60; //avg calories burned per km
-        return (distance * caloriesPerKm).toFixed(2);
+    const calculateCalories = (distance, duration, userId, userProfiles) => {
+
+        //const userProfile = userProfiles.find(profile => profile.user_id === userId);
+
+        if(!userProfile || isNaN(distance) || distance<=0)
+        {
+            return "0.00";
+        }
+
+        const {age, gender, weight, height, activity_level} = userProfile;
+
+        const userWeight = weight;
+        const userAge = age;
+        const userGender = gender;
+        const userHeight = height;
+
+        let bmr; //Basal Metabolic Rate ----> Mifflin-St Jeor Equation
+        if(userGender.toLowerCase() === 'male'){
+            bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge + 5;
+        }else{
+            bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge -161;
+        }
+
+        const caloriesPerMinRest = bmr / 1440;  //calories burned per minute during rest
+
+        let met; //Metabolic Equivalent of Task   ---> based on workout intenstisy
+
+        const paceMinPerKm = duration / 60 / distance;
+
+        if(paceMinPerKm > 8){
+            met = 4;
+        }else if(paceMinPerKm > 5){
+            met = 8;
+        }else{
+            met = 11;
+        }
+
+        const activityFactor = 0.9 + (activity_level || 3) * 0.05;
+        met *=activityFactor;
+
+        const durationHours = duration / 3600;
+        const caloriesBurned = met * userWeight * durationHours;
+
+        return isNaN(caloriesBurned) ? "0.00" : caloriesBurned.toFixed(2);
     };
 
     const handlePause = () => {
@@ -181,8 +236,18 @@ const StartWorkoutScreen = () => {
        
 
     const confirmEndWorkout = () => {
+        const workoutData = {
+            id: Date.now().toString(),
+            name: workoutName,
+            duration: duration,
+            distance: distance,
+            pace: pace,
+            calories: calories,
+            route: locationHistory,
+
+        };
         setIsModalVisible(false);
-        navigation.navigate('HomeScreen');
+        navigation.navigate('HomeScreen', {completedWorkout: workoutData});
     };
 
     const cancelEndWrokout = () => {
@@ -194,7 +259,17 @@ const StartWorkoutScreen = () => {
         const minutes = Math.floor(seconds/60);
         const remainingSeconds = seconds % 60;
         return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-    }
+    };
+
+    const isValidLocation = (prevLocation, newLocation) => {
+        if (!prevLocation) return true;
+
+        const distance = calculateDistance(prevLocation, newLocation);
+
+        return distance < 0.1;
+    };
+
+
 
   return (
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
@@ -212,13 +287,13 @@ const StartWorkoutScreen = () => {
         ) : (
             <>
             <View style={styles.mapContainer}>
-                <MapView style={styles.map}
+                <MapView provider={PROVIDER_GOOGLE} style={styles.map}
                     initialRegion={{
                         latitude: location?.latitude ??  37.78825,
                         longitude: location?.longitude ?? -122.4324,
                         latitudeDelta: 0.01,
                         longitudeDelta: 0.01,
-                    }} >
+                    }} showsUserLocation={true} followsUserLocation={true}>
                         <Polyline
                             coordinates={locationHistory}
                             strokeColor='#6200ee'
