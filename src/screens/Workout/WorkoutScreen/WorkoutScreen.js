@@ -4,6 +4,8 @@ import FastImage from 'react-native-fast-image';
 import { useNavigation} from '@react-navigation/native';
 import StartWorkoutScreen from '../StartWorkoutScreen';
 import Geolocation from 'react-native-geolocation-service';
+import GymScreen from '../../GymScreen/GymScreen';
+
 
 
 const workouts = [
@@ -21,6 +23,10 @@ const WorkoutScreen = () => {
 const navigation = useNavigation();
 
 const handleWorkoutPress = (workoutName) => {
+    if(workoutName === 'Gym'){
+        navigation.navigate('GymScreen');
+        return;
+    }
     Geolocation.getCurrentPosition(
         (position) => {
             navigation.navigate('StartWorkoutScreen', {workoutName, initialLocation: position.coords});

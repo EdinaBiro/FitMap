@@ -23,7 +23,8 @@
    
     "android": {
       "package" : "com.galaxies.firebase",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": ["CAMERA"]
       
     },
     "web": {
@@ -54,8 +55,15 @@
             "useFrameworks": "static"
           }
         }
-      ]
-    ]
+      ],
+      [ "expo-camera",
+        {
+          "cameraPermission": "Allow $(FitMap) to access your camera",
+          "microphonePermission": "Allow $(Fitmap) to access your microphone",
+          "recordAudioAndroid": true 
+        }
 
+       ]
+    ]
   }
 }
