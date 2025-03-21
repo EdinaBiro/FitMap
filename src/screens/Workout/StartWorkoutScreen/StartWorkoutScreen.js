@@ -6,7 +6,10 @@ import MapView, {Polyline} from 'react-native-maps';
 import {PROVIDER_GOOGLE} from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
 import  Modal from 'react-native-modal';
-
+import axios from 'axios';
+import workoutApi from '../workoutApi';
+import {format} from "date-fns";
+import auth from '@react-native-firebase/auth';
 
 const StartWorkoutScreen = () => {
 
@@ -24,8 +27,26 @@ const StartWorkoutScreen = () => {
     const [location, setLocation] = useState(initialLocation ?? null);
     const [locationHistory, setLocationHistory] = useState(initialLocation ? [initialLocation] : []);
     const [isPaused, setIsPaused] = useState(false);
+    const [userProfile, setuserProfile] = useState(null);
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const formattedDate = format(new Date(), "yyyy-MM-dd");
+    const currentUserId =auth().currentUser?.uid;
+
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            if(currentUserId){
+                try{
+                    const response = await axios.get(`http://192.168.1.7:8000/profile/user/${currentUserId}`);
+                    setuserProfile(response.data);
+                }catch(error){
+                    console.error("Error fetching user profile: ", error);
+                }
+            }
+        };
+        fetchUserProfile();
+    }, [currentUserId]);
+    
 
     useEffect(() => {
         if(!location){
@@ -235,19 +256,30 @@ const StartWorkoutScreen = () => {
     };
        
 
-    const confirmEndWorkout = () => {
-        const workoutData = {
-            id: Date.now().toString(),
-            name: workoutName,
-            duration: duration,
-            distance: distance,
-            pace: pace,
-            calories: calories,
-            route: locationHistory,
+    const confirmEndWorkout = async () => {
 
-        };
-        setIsModalVisible(false);
-        navigation.navigate('HomeScreen', {completedWorkout: workoutData});
+        try{
+            setIsModalVisible(false);
+
+            const workoutData = {
+                user_id : currentUserId,
+                distance: parseFloat(distance.toFixed(2)),
+                calories_burned: parseFloat(calories),
+                pace: parseFloat(pace),
+                duration: parseFloat(duration),
+                workout_name: workoutName,
+                workout_date : formattedDate,
+               
+            };
+            console.log("Workout data being sent:", JSON.stringify(workoutData));
+
+            const savedWorkout = await workoutApi.saveWorkout(workoutData);
+            navigation.navigate('HomeScreen', {completedWorkout: savedWorkout});
+        } catch(error){
+            Alert.alert('Error', 'Failed to save workout. Please try again', [{text: 'OK'}]);
+            console.error("Error saving workout: ", error.response?.data || error.message);
+        }
+       
     };
 
     const cancelEndWrokout = () => {

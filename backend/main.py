@@ -1,8 +1,7 @@
 from fastapi import FastAPI
-from backend.routes import profile
+from backend.routes import profile, workout, user
 from backend.db.database import engine,Base
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routes import user
 
 Base.metadata.create_all(bind = engine)
 
@@ -17,6 +16,7 @@ app.add_middleware(
 )
 app.include_router(profile.router)
 app.include_router(user.router)
+app.include_router(workout.router)
 
 @app.get("/")
 def read_root():
