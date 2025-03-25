@@ -1,14 +1,14 @@
-import { StyleSheet, Text, View , Button, Platform, PermissionsAndroid, Animated, Alert, TouchableOpacity} from 'react-native';
-import React, { useState, useEffect, useRef} from 'react';
-import { useNavigation, useRoute} from '@react-navigation/native';
+import { StyleSheet, Text, View, Button, Platform, PermissionsAndroid, Animated, Alert, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Geolocation from 'react-native-geolocation-service';
-import MapView, {Polyline} from 'react-native-maps';
-import {PROVIDER_GOOGLE} from 'react-native-maps';
+import MapView, { Polyline } from 'react-native-maps';
+import { PROVIDER_GOOGLE } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
-import  Modal from 'react-native-modal';
+import Modal from 'react-native-modal';
 import axios from 'axios';
 import workoutApi from '../workoutApi';
-import {format} from "date-fns";
+import { format } from "date-fns";
 import auth from '@react-native-firebase/auth';
 
 const StartWorkoutScreen = () => {
@@ -20,9 +20,9 @@ const StartWorkoutScreen = () => {
     const [duration, setDuration] = useState(0);
     const [isWorkoutActive, setIsWorkoutActive] = useState(false);
     const [isModalVisible, setIsModalVisible] = useState(false);
-    const navigation= useNavigation();
+    const navigation = useNavigation();
     const route = useRoute();
-    const {workoutName} = route.params;
+    const { workoutName } = route.params;
     const initialLocation = route.params?.initialLocation;
     const [location, setLocation] = useState(initialLocation ?? null);
     const [locationHistory, setLocationHistory] = useState(initialLocation ? [initialLocation] : []);
@@ -31,54 +31,54 @@ const StartWorkoutScreen = () => {
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const formattedDate = format(new Date(), "yyyy-MM-dd");
-    const currentUserId =auth().currentUser?.uid;
+    const currentUserId = auth().currentUser?.uid;
 
     useEffect(() => {
         const fetchUserProfile = async () => {
-            if(currentUserId){
-                try{
+            if (currentUserId) {
+                try {
                     const response = await axios.get(`http://192.168.1.7:8000/profile/user/${currentUserId}`);
                     setuserProfile(response.data);
-                }catch(error){
+                } catch (error) {
                     console.error("Error fetching user profile: ", error);
                 }
             }
         };
         fetchUserProfile();
     }, [currentUserId]);
-    
+
 
     useEffect(() => {
-        if(!location){
+        if (!location) {
             Geolocation.getCurrentPosition(
                 (position) => {
                     setLocation(position.coords);
                     setLocationHistory([position.coords]);
                 },
                 (error) => console.log(error),
-                {enableHighAccuracy: true}
+                { enableHighAccuracy: true }
             );
-           
+
         }
     }, []);
 
-    useEffect( () =>{
-        if(countDown > 0){
-            const timer = setTimeout( () => {
-                setCountdown(countDown -1);
+    useEffect(() => {
+        if (countDown > 0) {
+            const timer = setTimeout(() => {
+                setCountdown(countDown - 1);
                 animateCountdown();
-            },1000);
-            return () => clearTimeout(timer); 
-        }else{
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else {
             startWorkout();
         }
     }, [countDown]);
 
     useEffect(() => {
         let interval;
-        if(isWorkoutActive && !isPaused){
+        if (isWorkoutActive && !isPaused) {
             interval = setInterval(() => {
-                setDuration(prevDuration => prevDuration +1); 
+                setDuration(prevDuration => prevDuration + 1);
             }, 1000);
         }
         return () => clearInterval(interval);
@@ -95,7 +95,7 @@ const StartWorkoutScreen = () => {
                 useNativeDriver: true,
             }),
             Animated.spring(scaleAnim, {
-                toValue:1,
+                toValue: 1,
                 friction: 2,
                 useNativeDriver: true,
             }),
@@ -103,30 +103,30 @@ const StartWorkoutScreen = () => {
     };
 
     const requestLocationPermission = async () => {
-    try{
-        if(Platform.OS === 'android') {
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                {
-                    title: 'Location Permission',
-                    message: 'This app needs access to your location to track your workout',
-                    buttonNeutral: 'Ask ME Later',
-                    buttonNegative: 'Cancel',
-                    buttonPositive: 'OK',
-                }
-            );
-            return granted === PermissionsAndroid.RESULTS.GRANTED;}
-        }catch(err){
+        try {
+            if (Platform.OS === 'android') {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                    {
+                        title: 'Location Permission',
+                        message: 'This app needs access to your location to track your workout',
+                        buttonNeutral: 'Ask ME Later',
+                        buttonNegative: 'Cancel',
+                        buttonPositive: 'OK',
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            }
+        } catch (err) {
             console.warn(err);
             return false;
         }
-        
+
     };
 
     const startWorkout = async () => {
         const hasPermission = await requestLocationPermission();
-        if(!hasPermission)
-        {
+        if (!hasPermission) {
             console.log('Permission to acces location was denied');
             return;
         }
@@ -138,28 +138,28 @@ const StartWorkoutScreen = () => {
                 const newCoords = newLocationData.coords;
 
                 setLocation((prevLocation) => {
-                    if(prevLocation && !isPaused){
+                    if (prevLocation && !isPaused) {
                         const distanceIncrement = calculateDistance(prevLocation, newCoords);
-                        setDistance(prevDistance =>{ 
-                            const newDistance = prevDistance+distanceIncrement;
-                            
-                            setPace(calculatePace(newDistance,duration));
-                            setCalories(calculateCalories(newDistance));
-                    
-                    return newDistance;
-                });
-            }
+                        setDistance(prevDistance => {
+                            const newDistance = prevDistance + distanceIncrement;
 
-                return newCoords;
-              
-                    
+                            setPace(calculatePace(newDistance, duration));
+                            setCalories(calculateCalories(newDistance));
+
+                            return newDistance;
+                        });
+                    }
+
+                    return newCoords;
+
+
                 });
-            if(!isPaused && newCoords && newCoords.latitude && newCoords.longitude){
-                setLocationHistory(prev => [...prev, newCoords]);
-            }
-        },
-            
-    
+                if (!isPaused && newCoords && newCoords.latitude && newCoords.longitude) {
+                    setLocationHistory(prev => [...prev, newCoords]);
+                }
+            },
+
+
             {
                 enableHighAccuracy: true,
                 distanceFilter: 1,
@@ -167,12 +167,12 @@ const StartWorkoutScreen = () => {
                 fastestInterval: 500,
             }
         );
-            
+
     };
 
     const calculateDistance = (startCoords, endCoords) => {
 
-        if(!startCoords || !endCoords || !startCoords.latitude && !startCoords.longitude && !endCoords.latitude || !endCoords.longitude){
+        if (!startCoords || !endCoords || !startCoords.latitude && !startCoords.longitude && !endCoords.latitude || !endCoords.longitude) {
             return 0;
         }
         const { latitude: lat1, longitude: lon1 } = startCoords;
@@ -194,9 +194,9 @@ const StartWorkoutScreen = () => {
     };
 
     const calculatePace = (distance, currentDuration) => {
-        if(distance <=0  || currentDuration <=0) return 0;
+        if (distance <= 0 || currentDuration <= 0) return 0;
 
-        const paceValue = (currentDuration / 60) / distance; 
+        const paceValue = (currentDuration / 60) / distance;
 
         return isNaN(paceValue) ? "0.00" : paceValue.toFixed(2);
     };
@@ -205,12 +205,11 @@ const StartWorkoutScreen = () => {
 
         //const userProfile = userProfiles.find(profile => profile.user_id === userId);
 
-        if(!userProfile || isNaN(distance) || distance<=0)
-        {
+        if (!userProfile || isNaN(distance) || distance <= 0) {
             return "0.00";
         }
 
-        const {age, gender, weight, height, activity_level} = userProfile;
+        const { age, gender, weight, height, activity_level } = userProfile;
 
         const userWeight = weight;
         const userAge = age;
@@ -218,10 +217,10 @@ const StartWorkoutScreen = () => {
         const userHeight = height;
 
         let bmr; //Basal Metabolic Rate ----> Mifflin-St Jeor Equation
-        if(userGender.toLowerCase() === 'male'){
+        if (userGender.toLowerCase() === 'male') {
             bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge + 5;
-        }else{
-            bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge -161;
+        } else {
+            bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge - 161;
         }
 
         const caloriesPerMinRest = bmr / 1440;  //calories burned per minute during rest
@@ -230,16 +229,16 @@ const StartWorkoutScreen = () => {
 
         const paceMinPerKm = duration / 60 / distance;
 
-        if(paceMinPerKm > 8){
+        if (paceMinPerKm > 8) {
             met = 4;
-        }else if(paceMinPerKm > 5){
+        } else if (paceMinPerKm > 5) {
             met = 8;
-        }else{
+        } else {
             met = 11;
         }
 
         const activityFactor = 0.9 + (activity_level || 3) * 0.05;
-        met *=activityFactor;
+        met *= activityFactor;
 
         const durationHours = duration / 3600;
         const caloriesBurned = met * userWeight * durationHours;
@@ -252,34 +251,46 @@ const StartWorkoutScreen = () => {
     };
 
     const handleEndWorkout = () => {
-       setIsModalVisible(true);
+        setIsModalVisible(true);
     };
-       
+
 
     const confirmEndWorkout = async () => {
 
-        try{
+        try {
             setIsModalVisible(false);
 
+            const startTime = new Date(Date.now() - duration * 1000);
+            const endTime = new Date();
+
+            const formatTime = (date) => {
+                const hours = String(date.getHours()).padStart(2,'0');
+                const minutes = String(date.getMinutes()).padStart(2,'0');
+                const seconds = String(date.getSeconds()).padStart(2,'0');
+                return `${hours}:${minutes}:${seconds}`;
+            };
+
             const workoutData = {
-                user_id : currentUserId,
+                user_id: currentUserId,
                 distance: parseFloat(distance.toFixed(2)),
                 calories_burned: parseFloat(calories),
                 pace: parseFloat(pace),
-                duration: parseFloat(duration),
+                duration: duration,
                 workout_name: workoutName,
-                workout_date : formattedDate,
-               
+                workout_date: formattedDate,
+                start_time: formatTime(startTime),
+                end_time: formatTime(endTime)
+                
             };
             console.log("Workout data being sent:", JSON.stringify(workoutData));
 
             const savedWorkout = await workoutApi.saveWorkout(workoutData);
-            navigation.navigate('HomeScreen', {completedWorkout: savedWorkout});
-        } catch(error){
-            Alert.alert('Error', 'Failed to save workout. Please try again', [{text: 'OK'}]);
+            navigation.navigate('HomeScreen', { completedWorkout: savedWorkout });
+        } catch (error) {
+            Alert.alert('Error', 'Failed to save workout. Please try again', [{ text: 'OK' }]);
             console.error("Error saving workout: ", error.response?.data || error.message);
         }
-       
+
     };
 
     const cancelEndWrokout = () => {
@@ -288,7 +299,7 @@ const StartWorkoutScreen = () => {
     };
 
     const formatTime = (seconds) => {
-        const minutes = Math.floor(seconds/60);
+        const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
     };
@@ -303,75 +314,75 @@ const StartWorkoutScreen = () => {
 
 
 
-  return (
-    <ScrollView contentContainerStyle={styles.scrollViewContent}>
-    
-        {countDown > 0 ? (
-            <Animated.Text 
-                style={[
-                    styles.countdown,
-                    {opacity: fadeAnim, transform: [{scale: scaleAnim }]},
-                ]} 
+    return (
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+
+            {countDown > 0 ? (
+                <Animated.Text
+                    style={[
+                        styles.countdown,
+                        { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+                    ]}
                 >
                     {countDown}
                 </Animated.Text>
-    
-        ) : (
-            <>
-            <View style={styles.mapContainer}>
-                <MapView provider={PROVIDER_GOOGLE} style={styles.map}
-                    initialRegion={{
-                        latitude: location?.latitude ??  37.78825,
-                        longitude: location?.longitude ?? -122.4324,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                    }} showsUserLocation={true} followsUserLocation={true}>
-                        <Polyline
-                            coordinates={locationHistory}
-                            strokeColor='#6200ee'
-                            strokeWidth={3}/>
-                    </MapView>
-            <View style={styles.infoContainer}>
-            <Text style={styles.workoutText}>🏋️‍♂️ Workout Started: {workoutName}</Text>
-            <View style={styles.detailRow}>
-            <Text style={styles.detailsText}>⏱ Duration: {formatTime(duration)} </Text>
-            <Text style={styles.detailsText}>🏃‍♂️ Distance : {distance.toFixed(2)} km</Text>
-            <Text style={styles.detailsText}>⏱ Pace : {pace} min/km</Text>
-            <Text style={styles.detailsText}>🔥Calories : {calories} kcal</Text>
-            </View>
+
+            ) : (
+                <>
+                    <View style={styles.mapContainer}>
+                        <MapView provider={PROVIDER_GOOGLE} style={styles.map}
+                            initialRegion={{
+                                latitude: location?.latitude ?? 37.78825,
+                                longitude: location?.longitude ?? -122.4324,
+                                latitudeDelta: 0.01,
+                                longitudeDelta: 0.01,
+                            }} showsUserLocation={true} followsUserLocation={true}>
+                            <Polyline
+                                coordinates={locationHistory}
+                                strokeColor='#6200ee'
+                                strokeWidth={3} />
+                        </MapView>
+                        <View style={styles.infoContainer}>
+                            <Text style={styles.workoutText}>🏋️‍♂️ Workout Started: {workoutName}</Text>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailsText}>⏱ Duration: {formatTime(duration)} </Text>
+                                <Text style={styles.detailsText}>🏃‍♂️ Distance : {distance.toFixed(2)} km</Text>
+                                <Text style={styles.detailsText}>⏱ Pace : {pace} min/km</Text>
+                                <Text style={styles.detailsText}>🔥Calories : {calories} kcal</Text>
+                            </View>
 
 
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.button} onPress={handlePause}>
-                    <Text style={styles.buttonText}>{isPaused ? "Resume" : "Pause" }</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.endButton]} onPress={handleEndWorkout}>
-                    <Text style={styles.buttonText}>End Workout</Text>
-                </TouchableOpacity>
+                            <View style={styles.buttonContainer}>
+                                <TouchableOpacity style={styles.button} onPress={handlePause}>
+                                    <Text style={styles.buttonText}>{isPaused ? "Resume" : "Pause"}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.button, styles.endButton]} onPress={handleEndWorkout}>
+                                    <Text style={styles.buttonText}>End Workout</Text>
+                                </TouchableOpacity>
 
-                <Modal isVisible={isModalVisible} onBackdropPress ={cancelEndWrokout}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Confirm End Of Workout</Text>
-                        <Text style={styles.modalMessage}>Are you sure you want to end your workout?</Text>
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity style={styles.modalCancelButton} onPress={cancelEndWrokout}>
-                                <Text style={styles.modalButtonText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.modalConfirmButton} onPress={confirmEndWorkout}>
-                                <Text style={styles.modalButtonText}>OK</Text>
-                            </TouchableOpacity>
+                                <Modal isVisible={isModalVisible} onBackdropPress={cancelEndWrokout}>
+                                    <View style={styles.modalContent}>
+                                        <Text style={styles.modalTitle}>Confirm End Of Workout</Text>
+                                        <Text style={styles.modalMessage}>Are you sure you want to end your workout?</Text>
+                                        <View style={styles.modalButtons}>
+                                            <TouchableOpacity style={styles.modalCancelButton} onPress={cancelEndWrokout}>
+                                                <Text style={styles.modalButtonText}>Cancel</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.modalConfirmButton} onPress={confirmEndWorkout}>
+                                                <Text style={styles.modalButtonText}>OK</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                    </View>
+                                </Modal>
+                            </View>
                         </View>
-
                     </View>
-                </Modal>
-            </View>
-        </View>
-        </View>
-        </>
-        )}
+                </>
+            )}
 
-    </ScrollView>
-  );
+        </ScrollView>
+    );
 };
 
 
@@ -381,7 +392,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        
+
     },
 
     countdown: {
@@ -423,7 +434,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         marginBottom: 20,
     },
-    buttonContainer:{
+    buttonContainer: {
         flexDirection: 'row',
         marginTop: 20,
         justifyContent: 'space-between',
@@ -449,7 +460,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalContent:{
+    modalContent: {
         backgroundColor: '#fff',
         padding: 22,
         justifyContent: 'center',
@@ -457,7 +468,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         borderColor: 'rgba(0, 0, 0, 0.1)',
     },
-    modalTitle:{
+    modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 15,
@@ -488,7 +499,7 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 8,
         width: '40%',
-        alignItems:'center',
+        alignItems: 'center',
     }
 
 });

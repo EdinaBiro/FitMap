@@ -5,6 +5,7 @@ import {Ionicons} from '@expo/vector-icons';
 import BottomNavigation from '../bottomNav/BottomNavigation';
 import CustomDrawerContent from './CustomDrawerContent';
 import GymScreen from '../screens/GymScreen/GymScreen';
+import WorkoutDetailsScreen from '../screens/Workout/WorkoutDetailsScreen';
 
 
 const Drawer = createDrawerNavigator();
@@ -66,6 +67,13 @@ const DrawerNavigation = () => {
         <Drawer.Screen
         name="GymScreen"
         component={GymScreen}
+        options={{ title: '', drawerItemStyle: {display: 'none'}}}>
+
+        </Drawer.Screen>
+
+        <Drawer.Screen
+        name="WorkoutDetailsScreen"
+        component={WorkoutDetailsScreen}
         options={{ title: '', drawerItemStyle: {display: 'none'}}}>
 
         </Drawer.Screen>

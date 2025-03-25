@@ -5,8 +5,13 @@ from backend.services.bmi_calculator import calculate_bmi
 from backend.models.userSchema import UserSchema
 from backend.models.profile import Profile
 from backend.models.ProfileSchema import ProfileSchema
+import os
+import shutil
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 router = APIRouter(prefix="/profile", tags=["profiles"])
+
 
 @router.post("/create_profile")
 def create_profile(profile_data: ProfileSchema, db: Session = Depends(get_db)):
