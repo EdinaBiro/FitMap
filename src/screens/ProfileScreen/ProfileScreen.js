@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ScrollView } from 'react-native-gesture-handler';
 import auth from '@react-native-firebase/auth';
 import { useIsFocused } from '@react-navigation/native';
+import { baseURL } from '../../utils';
 
 
 const ProfileScreen = () => {
@@ -91,7 +92,7 @@ const ProfileScreen = () => {
       setIsLoading(true);
       
       try{
-        const response = await fetch(`http://192.168.1.7:8000/profile/user/${userId}`);
+        const response = await fetch(`${baseURL}/profile/user/${userId}`);
         console.log("Profile response status: ", response.status);
         if(response.ok){
           const data = await response.json();
@@ -138,7 +139,6 @@ const ProfileScreen = () => {
         }
         const currentUserId = user.uid;
 
-        const baseUrl= `http://192.168.1.7:8000`;
         let url;
         let method;
 
