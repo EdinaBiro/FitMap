@@ -12,6 +12,59 @@ import axios from 'axios';
 import auth from '@react-native-firebase/auth';
 import { StretchOutY } from 'react-native-reanimated';
 import baseURL from '../../utils';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import {GEMINI_API_KEY} from '@env';
+import { Ionicons } from '@expo/vector-icons';
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+const processImage = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+    });
+    return{
+        inlineData: {data: base64Data, mimeType: blob.type},
+    };
+
+};
+
+const analyzeProgress = async (image1Uri, image2Uri) => {
+    try{
+        const model = genAI.getGenerativeModel({model: "gemini-1.5-flash"});
+        const prompt =`
+            Analyze these two fitness progress pictures (before and after) and give a brief analysis with:
+            💪 Muscle & Fat changes
+            🏋️ Posture Form
+            🔍 Most noticeable differences
+            🎯 2-3 recommendations
+
+            Provide a clear, structured response with:
+            - Key positive changes
+            - Areas needing to work
+            - Actionable advice
+
+            Keep it motivational, but honest, using simple fitness terms. Keep it short. Inlcude revelant emojis in your response.
+
+            Rules:
+            - Use only plain text ( no *** or markdown)
+           
+        `;
+
+        const image1 = await processImage(image1Uri);
+        const image2 = await processImage(image2Uri);
+
+        const result = await model.generateContent([prompt,image1,image2]);
+        const response = await result.response;
+        return response.text();
+    }catch(error){
+        console.error('Gemini error: ', error);
+        return "Analysis failed. Please check your images and try again";
+    }
+};
 
 const CalendarScreen = () => {
 
@@ -29,6 +82,10 @@ const CalendarScreen = () => {
     const [showDatePicker2, setShowDatePicker2] = useState(false);
     const [userId, setUserId] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [progressCycle, setProgressCycle] = useState('monthly');
+    const [progressEntries, setProgressEntries] = useState([]);
 
     const [workoutPlan, setWorkoutPlan] = useState({
         title: '',
@@ -327,6 +384,43 @@ const CalendarScreen = () => {
         );
     };
    
+    const handleProgressImage = async (imageNumber) => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4,3],
+            quality: 1,
+        });
+
+        if(!result.canceled){
+            const currentDate = new Date();
+            const newEntry ={
+                date: currentDate,
+                imageUri: result.assets[0].uri,
+                type: imageNumber === 1 ? 'before': 'after'
+            };
+
+            if(imageNumber === 1){
+                setImage1(result.assets[0].uri);
+                setUploadDate1(currentDate)
+            }else{
+                setImage2(result.assets[0].uri);
+                setUploadDate2(currentDate);
+
+                if(progressCycle === 'auto'){
+                    setTimeout(() => {
+                        setImage1(result.assets[0].uri);
+                        setUploadDate1(currentDate);
+                        setImage2(null);
+                        setUploadDate2(null);
+                        alert('This image will be used as your next "Before" comparison');
+                    }, 1000);
+                }
+            }
+
+            setProgressEntries(prev => [...prev, newEntry]);
+        }
+    };
  
     return (
     
@@ -411,59 +505,90 @@ const CalendarScreen = () => {
         </Modal> */}
 
         <View style={styles.progresSection}>
-             <Text style={styles.textProgress}>Let's track your progress</Text>
-             <Text style={styles.subtitle}>See the changes week by week</Text>
+             <Text style={styles.textProgress}>Progress Tracker</Text>
+             <Text style={styles.subtitle}>Visualize your transformation journey</Text>
        
-
-    
-        <View style={styles.progressCard}>
-            <View style={styles.imageContainer}>
+       <View style={styles.comparisonContainer}>
+        <View style={styles.imageColumn}>
+                <Text style={styles.imageLabel}>BEFORE</Text>
                 <TouchableOpacity style={styles.uploadButton} onPress={() => PickProgessImage(1)}>
                     {image1 ? (
+                        <>
                         <Image source={{uri: image1}} style={styles.image}/>
+                        <View style={styles.dateBadge}>
+                            <Text style={styles.dateBadgeText}>
+                                {moment(uploadDate1).format('MMM D')}
+                            </Text>
+                        </View>
+                        </>
                     ):(
-                        <Text style={styles.uploadButtonText}>Before</Text>
+                        <View style={styles.uploadPlaceHolder}>
+                            <Ionicons name="add-circle-sharp" size={32} color="#6200ee"/>
+                            <Text style={styles.uploadButtonText}>Add A Before Photo</Text>
+                        </View> 
                        
                     )}
-                    </TouchableOpacity>
-                    {uploadDate1 && <Text style={styles.dateText}>{moment(uploadDate1).format('YYYY-MM-DD HH:mm')}</Text>}
-                    {showDatePicker1 && (
-                        <DateTimePicker 
-                            testId="dateTimePicker1"
-                            value={uploadDate1 || new Date()}
-                            mode="datetime"
-                            is24Hour={true}
-                            display="default"
-                            onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 1)} />
-                    )}
-                
+                </TouchableOpacity>
             </View>
 
-            
+                    <View style={styles.divider}>
+                        <View style={styles.dividerLine}/>
+                        <Ionicons name="compass" size={24} color="#6200ee"/>
+                        <View style={styles.dividerLine}/>
+                    </View>
 
-            <View style={styles.imageContainer}>
-                <TouchableOpacity style={styles.uploadButton} onPress={() => PickProgessImage(2)}>
+                <View style={styles.imageColumn}>
+                    <Text style={styles.imageLabel}>AFTER</Text>
+                    <TouchableOpacity style={styles.imageUploadCard} onPress={() => PickProgessImage(2)}>
                     {image2 ? (
+                        <>
                         <Image source={{uri: image2}} style={styles.image}/>
+                        <View style={styles.dateBadge}>
+                            <Text style={styles.dateBadgeText}>
+                                {moment(uploadDate2).format('MMM D')}
+                            </Text>
+                        </View>
+                        </>
                     ):(
-                        <Text style={styles.uploadButtonText}>After</Text>
-                       
-                    )}
+                        <View style={styles.uploadPlaceholder}>
+                            <Ionicons name="add-circle-sharp" size={32} color="#6200ee"/>
+                            <Text style={styles.uploadButtonText}>Add An After Photo</Text>
+                        </View> 
+                    )} 
                     </TouchableOpacity>
-                    {uploadDate2 && <Text style={styles.dateText}>{moment(uploadDate2).format('YYYY-MM-DD HH:mm')}</Text>}
-                    {showDatePicker2 && (
-                        <DateTimePicker 
-                            testID="dateTimePicker2"
-                            value={uploadDate2 || new Date()}
-                            mode="datetime"
-                            is24Hour={true}
-                            display="default"
-                            onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 2)} />
-                    )}
-                
+                </View>
             </View>
-            
-         </View>
+
+         <TouchableOpacity style={styles.analyzeButton} onPress={async() =>{
+            if(!image1 || !image2){
+                alert("Please upload both 'Before' and 'After' images first");
+                return;
+            }
+            setIsAnalyzing(true);
+            const result = await analyzeProgress(image1, image2);
+            setAnalysisResult(result);
+            setIsAnalyzing(false);
+        }}
+        disabled={isAnalyzing}
+        >
+            <Text style={styles.analyzeButtontext}>
+                {isAnalyzing ? "Analyzing..." : "Analyze Progress"}
+            </Text>
+        </TouchableOpacity>
+
+        {analysisResult && (
+            <View style ={styles.analysisResultContainer}>
+                <View style={styles.analysisHeader}>
+                    <Ionicons name="analytics" size={24} color="#6200ee"/>
+                    <Text style={styles.analysisHeaderText}>Progress Analysis</Text>
+                </View>
+                <Text style ={styles.analysisResultText}>{analysisResult}</Text>
+                <View style={styles.analysisFooter}>
+                    <Ionicons name="heart" size={16} color="#6200ee"/>
+                    <Text style={styles.analysisFooterText}>Keep up the great work</Text>
+            </View>
+        </View>
+        )}
          </View>
     </ScrollView>
 
@@ -549,6 +674,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f0f0f0",
+        paddingBottom: 60
     },
     scrollViewContainer: {
         flexGrow: 1,
@@ -742,6 +868,7 @@ const styles = StyleSheet.create({
     },
     progresSection: {
         marginTop: 30,
+        marginBottom: 20,
     },
     weatherText: {
         fontSize: 16,
@@ -787,17 +914,17 @@ const styles = StyleSheet.create({
     uploadButton: {
         height: 150,
         width: 150,
-        backgroundColor: '#6200ee',
+        backgroundColor: '#f8f8f8',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 10,
-        //borderRadius: 10,
         borderWidth: 1,
         borderColor: '#ddd',
+        overflow: 'hidden',
     },
     image:{
-        width: 150,
-        height: 150,
+        width: '100%',
+        height: '100%',
     },
     scrollViewContainer:{
         flexGrow: 1,
@@ -903,6 +1030,115 @@ const styles = StyleSheet.create({
    workoutTypeTextSeelected: {
     color: 'white',
    },
+   analyzeButton:{
+    backgroundColor: '#6200ee',
+    padding: 12,    
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+   },
+   analyzeButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+   },
+   analysisResultContainer: {
+    backgroundColor: '#f8f4ff',
+    padding: 20,
+    borderRadius: 12,
+    marginTop: 15,
+    marginBottom: 30,
+    borderColor: "#6200ee",
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+   },
+   analysisHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0d0ff',
+    paddingBottom: 8,
+   },
+   analysisHeaderText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6200ee',
+    marginLeft: 8,
+   },
+   analysisResultText: {
+    color: '#333',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+   },
+   analysisFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+   },
+   comparisonContainer:{
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 15,
+    width: '100%',
+
+   },
+   imageColumn:{
+    alignItems: 'center',
+    marginHorizontal: 10,
+   },
+   imageLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+   },
+   imageUploadCard:{
+    height: 150,
+    width: 150,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+   },
+   uploadPlaceHolder:{
+    alignItems: 'center',
+    justifyContent: 'center',
+   },
+   uploadButtonText:{
+    marginTop: 10,
+    textAlign: 'center',
+   },
+   divider:{
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+   },
+   dividerLine: {
+    height: 1,
+    width: 30,
+    backgroundColor: '#6200ee',
+    marginVertical: 10,
+   },
+   dateBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+   },
+   dateBadgeText: {
+    color: 'white',
+    fontSize:16
+   }
 });
 
 export default CalendarScreen;

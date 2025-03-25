@@ -45,3 +45,5 @@ android/app/build/outputs/apk/debug/app-debug.apk
 *.swo
 venv/
 env/
+
+.env
