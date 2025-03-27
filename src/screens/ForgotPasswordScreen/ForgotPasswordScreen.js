@@ -1,25 +1,45 @@
-import { StyleSheet, Text, View, Image, ScrollView} from 'react-native'
+import { StyleSheet, Text, View, Image, ScrollView, Alert} from 'react-native'
 import React from 'react';
 import CustomInput from '../../components/CustomInput';
 import {useState} from 'react';
 import CustomButton from '../../components/CustomButton';
 import {useForm} from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
-
+import auth from '@react-native-firebase/auth';
 
 const ForgotPasswordScreen= () => {
 
-    const [email, setEmail] = useState('');
-
     const {control,handleSubmit} = useForm();
     const navigation = useNavigation();
+    const [loading, setIsLoading] = useState(false);
 
 
 
-    const onSendPressed = (data) => {
-      console.warn(data);
-      navigation.navigate("NewPasswordScreen");
-    }
+    const onSendPressed = async (data) => {
+      try{
+        setIsLoading(true);
+        await auth().sendPasswordResetEmail(data.email);
+        Alert.alert(
+          'Email sent',
+          'A password reset link has been sent to your email address',
+          [{ text: 'OK', onPress: () => navigation.navigate('LoginScreen')}]
+        );
+      }catch(error){
+        let errorMessage = 'An error occured. Please try again';
+
+        if(error.code === 'auth/invalid-email'){
+          errorMessage='This email address is invalid';
+        }else if(error.code === 'auth/user-not-found'){
+          errorMessage = 'No user found with this email address.';
+        }
+
+        Alert.alert('Error', errorMessage);
+      }finally{
+        setIsLoading(false);
+      }
+      
+      
+    };
     
 
     const onSignInPressed = () => {
@@ -33,17 +53,21 @@ const ForgotPasswordScreen= () => {
      <Text style={styles.title}>Reset your password</Text>
 
       <CustomInput 
-      name = "Email"
+      name = "email"
       control={control}
       placeholder="Email" 
       rules={{
-          required: 'Email is required'
+          required: 'Email is required',
+          pattern: {
+            value:  /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+            message: 'Invalid email address',
+          }
       }}
       
       /> 
 
 
-      <CustomButton text="Send" onPress={handleSubmit(onSendPressed)}/>
+      <CustomButton text={loading ? "Sending..." : "Send"} onPress={handleSubmit(onSendPressed)} disabled={loading}/>
     
       <CustomButton 
       text="Back to Sign in" 
