@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer,Float, Text, Date, ForeignKey,Time
+from sqlalchemy import Column, Integer,Float, Text, Date, ForeignKey,Time, Boolean
 from backend.db.database import Base
 
 
@@ -15,4 +15,5 @@ class Workout(Base):
     workout_date = Column(Date, nullable=True)
     start_time = Column(Time,nullable=True)
     end_time = Column(Time,nullable=True)
+    is_completed = Column(Boolean, default=False)
 
