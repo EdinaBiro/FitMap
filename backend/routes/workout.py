@@ -27,7 +27,8 @@ def add_workout(workout_data: WorkoutCreate, db: Session= Depends(get_db)):
             workout_name = workout_data.workout_name,
             workout_date=workout_data.workout_date,
             start_time=parse_time(workout_data.start_time),
-            end_time=parse_time(workout_data.end_time)
+            end_time=parse_time(workout_data.end_time),
+            is_completed= workout_data.is_completed
         )
 
         db.add(new_workout)
@@ -100,3 +101,23 @@ def delete_workout(workout_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Filed to delete workout: {str(e)}")
+    
+@router.put("/update_planned_workout/{workout_id}", response_model=WorkoutSchema)
+def update_planned_workout(workout_id: int,workout_data: WorkoutSchema,db: Session = Depends(get_db)):
+    workout = db.query(Workout).filter(Workout.workout_id == workout_id, Workout.is_completed == False).first()
+    if not Workout:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found or already completed")
+    
+    allowed_fileds = ['workout_name', 'start_time', 'end_time', 'workout_date']
+
+    for field, value in workout_data.dict(exclude_unset=True).items():
+        if field in allowed_fileds:
+            setattr(Workout, field, value)
+    try:
+        db.commit()
+        db.refresh(workout)
+        return workout
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Filed to update workout: {str(e)}")
+    

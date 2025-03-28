@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'; 
-import { StyleSheet, View, Text, Modal, TextInput, Image, TouchableOpacity,ScrollView} from 'react-native';
+import { StyleSheet, View, Text, Modal, TextInput, Image, TouchableOpacity,ScrollView, Alert} from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
@@ -10,11 +10,11 @@ import {Agenda} from 'react-native-calendars';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import auth from '@react-native-firebase/auth';
-import { StretchOutY } from 'react-native-reanimated';
-import baseURL from '../../utils';
+import {baseURL} from '../../utils';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import {GEMINI_API_KEY} from '@env';
 import { Ionicons } from '@expo/vector-icons';
+import { GestureHandlerRootView, Swipeable, Switch } from 'react-native-gesture-handler';
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
@@ -86,12 +86,15 @@ const CalendarScreen = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [progressCycle, setProgressCycle] = useState('monthly');
     const [progressEntries, setProgressEntries] = useState([]);
+    const [editWorkoutModal, setEditWorkoutModal] = useState(false);
+    const [selectedWorkout, setSelectedWorkout] = useState(null);
 
     const [workoutPlan, setWorkoutPlan] = useState({
-        title: '',
+        id: '',
+        workoutType: '',
         time: new Date(),
         date: moment().format('YYYY-MM-DD'),
-        workoutType: ''
+        reminder: false
     });
 
     const workouts =[
@@ -172,6 +175,127 @@ const CalendarScreen = () => {
         }
     };
 
+    const deleteWorkout = async (workout) => {
+        try{
+
+            const workoutId = parseInt(workout.id);
+
+            await axios.delete(`${baseURL}/workout/delete_workout/${workoutId}`);
+
+            const updatedAgendaItems = {...agendaItems};
+            Object.keys(updatedAgendaItems).forEach(date => {
+                updatedAgendaItems[date] = updatedAgendaItems[date].filter(
+                    item => item.id !== workoutId.toString()
+                );
+
+                if(updatedAgendaItems[date].length === 0){
+                    delete updatedAgendaItems[date];
+                }
+            });
+
+            setAgendaItems(updatedAgendaItems);
+
+            const newMarkedDates ={};
+            Object.keys(updatedAgendaItems).forEach(date => {
+                newMarkedDates[date] = {marked: true, dotColor: '#6200ee'};
+            });
+            setMarkedDates(newMarkedDates);
+        }catch(error){
+            console.error('Error deleting workout: ', error);
+            Alert.alert('Error', 'Could not delete the workout. Please try agaian');
+        }
+    };
+
+    const updateWorkout = async () => {
+        try{
+            if(!selectedWorkout || !selectedWorkout.id){
+                alert('No workout selected to update');
+                return;
+            }
+            const workoutDetails = await axios.get(`${baseURL}/workout/get_workout/${selectedWorkout.id}`);
+
+            if(workoutDetails.data.is_completed){
+                Alert.alert('Error', 'Completed workouts cannot be modified');
+                return;
+            }
+            const updatedWorkoutData = {
+                workout_name: selectedWorkout.name,
+                start_time: `${selectedWorkout.time}:00`,
+                workout_date: selectedDate || moment().format('YYYY-MM-DD')
+            };
+
+            const response = await axios.put(`${baseURL}/workout/update_workout/${selectedWorkout.id}`,
+                updatedWorkoutData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if(response.status === 200){
+                const updatedAgendaItems = {...agendaItems};
+                Object.keys(updatedAgendaItems).forEach(date => {
+                    updatedAgendaItems[date] = updatedAgendaItems[date].map(workout => 
+                        workout.id === selectedWorkout.id
+                        ?{...workout, name: updatedWorkoutData.workout_name, time: moment(updatedWorkoutData.start_time, 'HH:mm:ss').format('HH:mm')}
+                        :workout
+                    );
+                });
+
+                setAgendaItems(updatedAgendaItems);
+                setEditWorkoutModal(false);
+
+                Alert.alert('Success', 'Workout updated successfully');
+            }
+        }catch(error){
+            console.error('Error updating workout: ', error);
+            Alert.alert('Error', 'Could not update the workout. Please try again');
+        }
+    };
+
+    const openEditWorkoutModal = (workout) => {
+        setSelectedWorkout({
+            id: workout.id,
+            name: workout.name,
+            time: workout.time,
+            is_completed: workout.is_completed || false
+        });
+        setEditWorkoutModal(true);
+    };
+
+    const renderRightActions = (workout) => {
+        return(
+            <View style={styles.swipeActionsContainer}>
+                <TouchableOpacity 
+                    style={[styles.swipeAction, styles.editAction]}
+                    onPress={() => openEditWorkoutModal(workout)}>
+                        <Ionicons name="pencil" size={20} color="white"/>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                style={[styles.swipeAction, styles.deleteAction]}
+                onPress={() => {
+                    Alert.alert(
+                        'Delete workout',
+                        'Are you sure you want to delete this workout?',
+                        [
+                            {text: 'Cancel', style: 'cancel'},
+                            {
+                                text: 'Delete',
+                                style:'destructive',
+                                onPress: () => deleteWorkout(workout)
+                            }
+                        ]
+                    );
+                }}
+           >
+            <Ionicons name="trash" size={20} color="white"/>
+            </TouchableOpacity>
+
+           </View>
+        );
+    };
 
 
     const fetchWorkoutsForDate = async (dateString) => {
@@ -253,36 +377,33 @@ const CalendarScreen = () => {
 
             const newWorkoutData = {
                 user_id: userId,
-                workout_name: workoutPlan.title || "Planned Workout",
+                workout_name: workoutPlan.workoutType|| "Planned Workout",
                 workout_date: workoutDate,
-                distance: 0,
-                duration: 0,
-                calories_burned: 0,
-                pace: 0,
                 start_time: workoutTime,
-                end_time: workoutTime
+                is_completed: false,
             };
+            console.log('Base url: ', baseURL);
 
             console.log('Sending workout data: ', newWorkoutData);
 
             const response = await axios.post(`${baseURL}/workout/add_workout`, newWorkoutData, {
                 headers: {
-                    'Content-Type': 'applocation/json',
-                }
+                    'Content-Type' : 'application/json'
+                },
+                timeout: 5000
             });
+
+            console.log('Response status', response.status);
+            console.log('Response data: ', response.data);
+
             const savedWorkout = response.data;
             const formattedTime = moment(workoutPlan.time).format('HH:mm');
 
             const newWorkout = {
                 id: savedWorkout.workout_id.toString(),
-                name: workoutPlan.title,
+                name: workoutPlan.workoutType || "Planned Workout",
                 time: formattedTime,
-                distance: 0,
-                duration: 0,
-                calories: 0,
-                pace: 0,
-                start_time: workoutTime,
-                end_time: workoutTime
+                is_completed: false
             };
 
             const updatedAgendaItems = {...agendaItems};
@@ -299,7 +420,6 @@ const CalendarScreen = () => {
 
             setWorkoutPlan({
                 title: '',
-                notes: '',
                 time: new Date(),
                 date: moment().format('YYYY-MM-DD'),
                 workoutType: ''
@@ -313,8 +433,13 @@ const CalendarScreen = () => {
                 console.error('Error response status: ', error.response.status);
 
             }
-        }
     }
+};
+
+
+
+
+    
 
     const pickImage = async() => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -357,6 +482,12 @@ const CalendarScreen = () => {
 
     const renderAgendaItem = (item) => {
         return(
+         <GestureHandlerRootView>
+            <Swipeable
+            renderRightActions={() => renderRightActions(item)}
+            rightThreshold={40}
+            containerStyle={styles.swipeableContainer}>
+
             <TouchableOpacity style={styles.agendaItem} onPress={() => navigation.navigate('WorkoutDetailsScreen', {
                 date: selectedDate,
                 workout: item
@@ -366,6 +497,8 @@ const CalendarScreen = () => {
                     <Text style={styles.agendaItemType}>{item.type}</Text>
                 </View>
                 <Text style={styles.agendaItemTitle}>{item.name}</Text>
+
+                {item.is_completed ? (
                
                     <View style ={styles.workoutStats}>
                         <Text style={styles.statText}>
@@ -379,10 +512,112 @@ const CalendarScreen = () => {
                             <Emoji name="fire" style={styles.emoji}/> {item.calories} kcal
                         </Text>
                     </View>
+                ):(
+                    <Text style={styles.plannedText}>Planned Workout</Text>
+                )}
                 
             </TouchableOpacity>
+            </Swipeable>
+            </GestureHandlerRootView>
         );
     };
+
+    const renderEditWorkoutModal = () => {
+        if(!selectedWorkout) return null;
+
+        const isCompleted = selectedWorkout.is_completed;
+        return(
+        <Modal 
+            visible={editWorkoutModal}
+            animationType='slide'
+            transparent={true}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>{isCompleted ? 'Workout Details' : 'Edit Workout'}</Text>
+
+                        {isCompleted && (
+                            <Text style={styles.coompletedWarning}>
+                                This workout is already completed and cannot be modified
+                            </Text>
+                        )}
+
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>Workout Type</Text>
+                            <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.workoutTypeScroll}
+                            >
+                                {workouts.map((workout, index) => {
+                                    <TouchableOpacity
+                                    key={index}
+                                    style={[
+                                        styles.workoutTypeButton,
+                                        selectedWorkout?.name === workout.name && styles.workoutTypeButtonSelected
+
+                                    ]}
+                                    onPress={ !isCompleted ? () => setSelectedWorkout(prev => ({...prev, name: workout.name})): null} disabled={isCompleted}
+                                    >
+                                        <Text style={[
+                                            styles.workoutTypeText,
+                                            selectedWorkout?.name === workout.name && styles.workoutTypeTextSeelected
+                                        ]}>
+                                            {workout.name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                })}
+                            </ScrollView>
+                        </View>
+
+                        <TouchableOpacity
+                        style={styles.timeButton}
+                        onPress={() => setShowTimePicker(true)}>
+                            <Text style={styles.timeButtonText}>
+                                Select time: {setSelectedWorkout.time || 'Select time'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {showTimePicker && (
+                            <DateTimePicker
+                            value={new Date(`1970-01-01T${selectedWorkout.time}:00`)}
+                            mode="time"
+                            display='default'
+                            onChange={(event, selectedTime) => {
+                                setShowTimePicker(false);
+                                if(selectedTime){
+                                    setSelectedWorkout(prev => ({
+                                        ...prev,
+                                        time: moment(selectedTime).format('HH:mm')
+                                    }));
+                                }
+                            }}
+                            />
+                        )}
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                            styke={[styles.modalButton, styles.cancelButton]}
+                            onPress={() => setEditWorkoutModal(false)}
+                            >
+                                <Text style={styles.cancelButton}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                            style={[styles.modalButton, styles.saveButton]}
+                            onPress={async () => {
+                                await updateWorkout();
+                            }}
+                            >
+                            <Text style={styles.saveButtonText}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
+ 
    
     const handleProgressImage = async (imageNumber) => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -640,13 +875,17 @@ const CalendarScreen = () => {
                             display="default"
                             onChange={handleTimeChange} />
                     )}
+    
 
-                    <TextInput
-                        style={[styles.input, styles.notesInput]}
-                        placeholder="Notes"
-                        multiline
-                        value={workoutPlan.notes}
-                        onChangeText={(text) => setWorkoutPlan(prev => ({...prev, notes: text}))} />
+                    <View style={styles.reminderContainer}>
+                        <Switch
+                        value={workoutPlan.reminder}
+                        onValueChange={(value) => setWorkoutPlan(prev => ({...prev, reminder: value}))}
+                        trackColor={{false: '#767677', true: '#6200ee'}} />
+                        
+                        <Text style={styles.reminderText}>Set reminder</Text>
+                
+                    </View>
                     
                     <View style={styles.modalButtons}>
                         <TouchableOpacity
@@ -664,6 +903,7 @@ const CalendarScreen = () => {
                 </View>
             </View>
         </Modal>
+        {renderEditWorkoutModal()}
         </SafeAreaView>
     );
 };
@@ -944,14 +1184,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#777',
    },
-   iput: {
+   input: {
     borderWidth: 1,
     borderColor: '#ddd',
    },
-   notesInput: {
-    height: 100,
-    textAlignVertical: 'top',
-   },
+ 
    timeButton: {
     backgroundColor: '#f0e6ff',
     padding: 12,
@@ -1138,6 +1375,68 @@ const styles = StyleSheet.create({
    dateBadgeText: {
     color: 'white',
     fontSize:16
+   },
+   plannedText:{
+    color: '#6200ee',
+    fontStyle: 'italic',
+    marginTop: 5,
+   },
+   reminderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+   },
+   reminderText: {
+    marginLeft: 10,
+    color: '#444'
+   },
+   swipeActionsContainer: {
+    flexDirection: 'row',
+    alignItems:'center',
+   },
+   swipeAction:{
+    width: 70,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+   },
+   editAction: {
+    backgroundColor: '#4CAF50',
+   },
+   deleteAction: {
+    backgroundColor: '#F44336'
+   },
+   swipeableContainer:{
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginVertical: 5,
+    overflow: 'hidden',
+   },
+   swipeableActionsContainer:{
+    flexDirection: 'row',
+    width: 140,
+    height: '100%'
+   },
+   swipeAction: {
+    width: 70,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+   },
+   editAction: {
+    backgroundColor: '#4CAF50'
+   }, 
+   deleteAction: {
+    backgroundColor: '#F44336'
+   },
+   coompletedWarning: {
+    color: 'red',
+    marginBottom: 15,
+    textAlign: 'center',
+   },
+   disabledButton: {
+    opacity: 0.5,
+    backgroundColor: '#f0f0f0'
    }
 });
 
