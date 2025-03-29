@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Dimensions, Button, TouchableOpacity, ActivityIndicator,FlatList, ScrollView} from 'react-native'
+import { StyleSheet, Text, View, Image, Button, TouchableOpacity, ActivityIndicator,FlatList, ScrollView} from 'react-native'
 import React, {useState, useEffect} from 'react';
 import MapView, {Marker} from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -14,7 +14,7 @@ const HomeScreen = () => {
 
   const navigation = useNavigation();
 
-  const userLocaion = async () => {
+  const getuserLocation = async () => {
     setLoading(true);
     let {status} = await Location.requestForegroundPermissionsAsync();
     if( status !== 'granted')
@@ -23,18 +23,34 @@ const HomeScreen = () => {
       setLoading(false);
       return;
     }
-    let location = await Location.getCurrentPositionAsync({enableHighAccuracy: true});
-    setMapRegion({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    });
+    try{
+
+      let location = await Location.getCurrentPositionAsync({enableHighAccuracy: true});
+      const userLocationData ={
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      };
+
+      setMapRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+
+    setUserLocation(userLocationData);
     setLoading(false);
 
     console.log(location.coords.longitude,location.coords.latitude);
+    return userLocationData;
+  }catch(error){
+    console.error("Error getting location: ", error);
+    setErrorMsg('Permission to access location was denied');
+    setLoading(false);
   }
+}
 
+  
 //   const getUserLocation = () => {
 //     Geolocation.getCurrentPosition(
 //         position => {
@@ -57,7 +73,7 @@ const HomeScreen = () => {
             longitude: userLocation.longitude + (Math.random() * 0.1 - 0.05) 
         };
 
-        const mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&markers=color:red%7Clabel:S%7C${startCoords.latitude},${startCoords.longitude}&markers=color:red%7Clabel:E%7C${endCoords.lat},${endCoords.lng}&path=color:0x0000ff%7C${startCoords.latitude},${startCoords.longitude}%7C${endCoords.lat},${endCoords.lng}&key=AIzaSyAGcodZd433BbtGC9oCVIMZlOuHuBPJ8Gk`;
+        const mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&markers=color:red%7Clabel:S%7C${startCoords.latitude},${startCoords.longitude}&markers=color:red%7Clabel:E%7C${endCoords.latitude},${endCoords.longitude}&path=color:0x0000ff%7C${startCoords.latitude},${startCoords.longitude}%7C${endCoords.latitude},${endCoords.longitude}&key=AIzaSyAGcodZd433BbtGC9oCVIMZlOuHuBPJ8Gk`;
 
         console.log("Map Image URL:", mapImageUrl);
 
@@ -85,7 +101,29 @@ const HomeScreen = () => {
   );
 
   useEffect( () => {
-    userLocaion();
+    getuserLocation();
+
+    const locationSubscription = Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        distanceInterval: 10,
+        timeInterval: 3000
+      },
+      (location) => {
+        const updatedLocation = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        };
+        setUserLocation(updatedLocation);
+        console.log('Location updated: ', updatedLocation);
+      }
+    );
+
+    return () => {
+      if(locationSubscription){
+        locationSubscription.then(sub => sub.remove());
+      }
+    };
   }, []);
 
   return (
@@ -97,17 +135,35 @@ const HomeScreen = () => {
       ): (
         <>
          <MapView style={styles.map} 
-        region = {mapRegion} onRegionChangeComplete={(region) => setMapRegion(region)}
+        // region = {mapRegion} onRegionChange={(region) => setMapRegion(region)}
+          initialRegion={mapRegion}
         >
-
-          <Marker coordinate={mapRegion} title = 'Marker'/>
+          {userLocation && (
+            <Marker coordinate={userLocation} title = 'Your Location' pinColor='#6200ee'/>
+          )}
       </MapView>
+
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={userLocaion}>
+        <TouchableOpacity style={styles.button} onPress={() =>
+          getuserLocation().then(location => {
+            if(location){
+              setMapRegion({
+                latitude: location.latitude,
+                longitude: location.longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421
+              });
+            }
+        })
+        }>
             <Text style={styles.buttonText}>Get Location</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={ () => navigation.navigate('WorkoutScreen', {initialLocation: {latitude: mapRegion.latitude, longitude: mapRegion.longitude}})}>
             <Text style={styles.buttonText}>Workout</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.button} onPress={ () => navigation.navigate('CalendarScreen', {location: userLocation})}>
+          <Text style={styles.buttonText}>Calendar</Text>
         </TouchableOpacity>
       </View>
 
