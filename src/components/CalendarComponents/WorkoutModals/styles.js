@@ -1,0 +1,178 @@
+import { StyleSheet } from "react-native";
+
+export default StyleSheet.create({
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        width: '90%',
+        backgroundColor: 'white',
+        borderRadius: 15,
+        padding:20,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+        maxHeight: '80%'
+    },
+    modalHeader:{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        flex: 1,
+        paddingRight: 10,
+    },
+    inputContainer: {
+        marginBottom: 15,
+    },
+    inputLabel: {
+        fontSize: 16,
+        fontWeight: '500',
+        marginBottom: 8,
+        color: '#444',
+    },
+    workoutTypeScroll: {
+        flexDirection: 'row',
+        marginBottom: 15,
+       },
+       workoutTypeButton:{
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#ddd',
+       },
+       workoutTypeButtonSelected: {
+        backgroundColor: '#6200ee',
+        borderColor: '#6200ee',
+       },
+       workoutTypeText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#444',
+       },
+       workoutTypeTextSeelected: {
+        color: 'white',
+       },
+       timeButton: {
+        backgroundColor: '#f0e6ff',
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e0d0ff',
+        marginBottom: 15,
+    },
+    timeButtonInner:{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    timeButtonText:{
+        fontSize: 16,
+        fontWeight:'500',
+        color: '#6200ee',
+        marginLeft: 8,
+    },
+    reminderContainer: {
+        marginBottom: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+       },
+       checkbox:{
+        width: 24,
+        height:24,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: '#6200ee',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 10,
+       },
+       checkBoxContainer:{
+        flexDirection: 'row',
+        alignItems: 'center',
+       },
+       chechBoxChecked: {
+        backgroundColor: '#6200ee'
+       },
+       reminderText: {
+        marginLeft: 10,
+        color: '#444'
+       },
+       modalButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center'
+       },
+       modalButtons:{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 15,
+        
+    },
+       cancelButton: {
+        backgroundColor: '#f2f2f2',
+        marginRight: 10,
+        borderRadius: 10,
+       },
+       cancelButtonText: {
+        color: '#666',
+        fontWeight: 'bold',
+       },
+       saveButton: {
+        backgroundColor: '#6200ee',
+        borderRadius: 10,
+       },
+       saveButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+       },
+       completedWarning: {
+        color: 'red',
+        marginBottom: 15,
+        textAlign: 'center',
+       },
+       closeButton:{
+        padding: 5,
+       },
+       weatherContainer:{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f8ff',
+        padding: 10,
+        borderRadius: 8,
+        marginBottom: 15,
+       },
+       weatherText:{
+        fontSize: 14,
+        color: '#444',
+        marginLeft: 8,
+        flex:1,
+       },
+       textInput: {
+        height: 40,
+        borderWidth:1,
+        borderColor: '#ddd',
+        borderRadius: 4,
+        paddingHorizontal: 10,
+        marginTop: 8,
+        backgroundColor: 'white'
+       },
+       
+  
+})

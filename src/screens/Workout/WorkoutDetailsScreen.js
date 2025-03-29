@@ -11,15 +11,17 @@ const WorkoutDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { date, workouts, workout } = route.params;
- 
+  const [isPlannedWorkout, setIsPlannedWorkout] = useState(false);
   const [workoutData, setWorkoutData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (workout) {
       setWorkoutData(workout);
+      setIsPlannedWorkout(!workout.is_completed);
     } else if (workouts && workouts.length > 0) {
       setWorkoutData(workouts[0]);
+      setIsPlannedWorkout(!workouts[0].is_completed);
     }else if(route.params.workoutId){
       fetchWorkoutDetails(route.params.workoutId);
     }
@@ -30,7 +32,7 @@ const WorkoutDetailsScreen = () => {
         const response = await axios.get(`${baseURL}/get_workout/${workoutId}`);
         const data = response.data;
 
-        setWorkoutData({
+        const workoutDetails={
           id: data.workout_id.toString(),
           name: data.workout_name,
           time: moment(data.workout_date).format('HH:mm'),
@@ -40,9 +42,13 @@ const WorkoutDetailsScreen = () => {
           pace: data.pace || 0,
           date: moment(data.workout_date).format('YYYY-MM-DD'),
           start_time: data.start_time,
-          end_time: data.end_time
+          end_time: data.end_time,
+          is_completed : data.is_completed || false
 
-        });
+        };
+
+        setWorkoutData(workoutDetails);
+        setIsPlannedWorkout(!data.is_completed);
     } catch (error) {
       console.error('Error fetching workout details: ', error);
       Alert.alert('Error', 'Failed to load wokrout details');

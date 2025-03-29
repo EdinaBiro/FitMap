@@ -105,14 +105,14 @@ def delete_workout(workout_id: int, db: Session = Depends(get_db)):
 @router.put("/update_planned_workout/{workout_id}", response_model=WorkoutSchema)
 def update_planned_workout(workout_id: int,workout_data: WorkoutSchema,db: Session = Depends(get_db)):
     workout = db.query(Workout).filter(Workout.workout_id == workout_id, Workout.is_completed == False).first()
-    if not Workout:
+    if not workout:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found or already completed")
     
     allowed_fileds = ['workout_name', 'start_time', 'end_time', 'workout_date']
 
     for field, value in workout_data.dict(exclude_unset=True).items():
         if field in allowed_fileds:
-            setattr(Workout, field, value)
+            setattr(workout, field, value)
     try:
         db.commit()
         db.refresh(workout)
