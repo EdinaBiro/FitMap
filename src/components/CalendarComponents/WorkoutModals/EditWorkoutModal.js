@@ -36,6 +36,7 @@ const EditWorkoutModal = ({
                                style={styles.workoutTypeScroll}
                                >
                                    {workouts.map((workout, index) => {
+                                    return(
                                        <TouchableOpacity
                                        key={index}
                                        style={[
@@ -52,6 +53,7 @@ const EditWorkoutModal = ({
                                                {workout.name}
                                            </Text>
                                        </TouchableOpacity>
+                                    );
                                    })}
                                </ScrollView>
                            </View>
@@ -60,23 +62,30 @@ const EditWorkoutModal = ({
                            style={styles.timeButton}
                            onPress={() => !isCompleted && setShowTimePicker(true)}
                            disabled={isCompleted}>
+                            <View style={styles.timeButtonInner}>
+                                <Ionicons name="time-outline" size={20} color="#6200ee"/>
                                <Text style={styles.timeButtonText}>
-                                   Select time: {selectedWorkout.time || 'Select time'}
+                                   {selectedWorkout.time ? moment(selectedWorkout.time, 'HH:mm').format('hh:mm A') : 'Select time'}
                                </Text>
+                            </View>
                            </TouchableOpacity>
    
                            {showTimePicker && (
                                <DateTimePicker
-                               value={new Date(`1970-01-01T${selectedWorkout.time}:00`)}
+                               value={selectedWorkout.time ? new Date(`1970-01-01T${selectedWorkout.time}`): new Date()}
                                mode="time"
                                display='default'
                                onChange={(event, selectedTime) => {
                                    setShowTimePicker(false);
-                                   if(selectedTime){
-                                       setSelectedWorkout(prev => ({
-                                           ...prev,
-                                           time: moment(selectedTime).format('HH:mm')
-                                       }));
+                                   if(selectedTime && selectedTime !== undefined){
+                                    const hours = selectedTime.getHours().toString().padStart(2,'0');
+                                    const minutes = selectedTime.getMinutes().toString().padStart(2,'0');
+                                    const formattedTime = `${hours}:${minutes}`;
+
+                                    selectedWorkout(prev => ({
+                                        ...prev,
+                                        time: formattedTime
+                                    }));
                                    }
                                }}
                                />

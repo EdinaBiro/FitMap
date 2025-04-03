@@ -7,27 +7,29 @@ import styles from './styles';
 const WorkoutAgenda = ({
     agendaItems, selectedDate, renderItem, setWorkoutPlan, setPlanWorkoutModal
 }) => {
+
+    const handleAddWorkout = () => {
+        setWorkoutPlan(prev => ({
+            ...prev,
+            date: selectedDate || moment().format('YYYY-MM-DD')
+        }));
+        setPlanWorkoutModal(true);
+    };
+
  return(
     <View style={styles.agendaContainer}>
+
+        <TouchableOpacity
+            style={styles.floatingAddButton}
+            onPress={handleAddWorkout}>
+                <Text style={styles.floatingAddButtonText}>+</Text>
+            </TouchableOpacity>
     <Agenda
         items={agendaItems}
         renderItem = {renderItem}
         renderEmptyData={() => (
             <View style={styles.emptyAgenda}>
                 <Text style={styles.emptyAgendaText}>No workouts planned for this day</Text>
-            
-
-        <TouchableOpacity 
-            style={styles.planWorkoutButton}
-            onPress={() => {
-                setWorkoutPlan(prev => ({
-                    ...prev,
-                    date: selectedDate || moment().format('YYYY-MM-DD')
-                }));
-                setPlanWorkoutModal(true);
-            }}
-            >
-            </TouchableOpacity>
             </View>
         )}
 

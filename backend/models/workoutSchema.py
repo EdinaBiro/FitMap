@@ -15,6 +15,7 @@ class WorkoutBase(BaseModel):
     start_time: Optional[time] = None
     end_time: Optional[time] = None
     is_completed: bool = False
+    has_reminder: bool = False
 
 class WorkoutCreate(WorkoutBase): 
     @validator('end_time')
@@ -36,4 +37,5 @@ class WorkoutUpdate(BaseModel):
     start_time: Optional[time] =None
     end_time: Optional[time] = None
     workout_date: Optional[date]= None
+    has_reminder: Optional[bool] = None
     model_config = ConfigDict(from_attributes=True)

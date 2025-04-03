@@ -115,7 +115,7 @@ const HomeScreen = () => {
           longitude: location.coords.longitude
         };
         setUserLocation(updatedLocation);
-        console.log('Location updated: ', updatedLocation);
+        //console.log('Location updated: ', updatedLocation);
       }
     );
 
