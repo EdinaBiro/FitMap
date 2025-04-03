@@ -54,4 +54,7 @@ export default StyleSheet.create({
        deleteAction: {
         backgroundColor: '#F44336'
        },
+       reminderIcon: {
+        marginLeft: 5,
+       }
 })

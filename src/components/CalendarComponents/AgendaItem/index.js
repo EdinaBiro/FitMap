@@ -44,7 +44,14 @@ const AgendaItem = ({
                             </Text>
                         </View>
                     ):(
-                        <Text style={styles.plannedText}>Planned Workout</Text>
+                        
+                        <View style={styles.plannedContainer}>
+                            <Text style={styles.plannedText}>Planned Workout</Text>
+                            {item.reminder && (
+                                <Ionicons name="alarm" size={16} color="#6200ee" style={styles.reminderIcon}/>
+                            )}
+                        </View>
+                        
                     )}
                     
                 </TouchableOpacity>

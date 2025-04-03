@@ -3,14 +3,13 @@ import { StyleSheet } from "react-native";
 export default StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: 'flex-end',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-        width: '90%',
         backgroundColor: 'white',
-        borderRadius: 15,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
         padding:20,
         shadowColor: '#000',
         shadowOffset: {width: 0, height: 2},
@@ -33,6 +32,16 @@ export default StyleSheet.create({
         fontWeight: 'bold',
         flex: 1,
         paddingRight: 10,
+    },
+    modalBody: {
+        flex: 1,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginTop: 16,
+        marginBottom: 8,
     },
     inputContainer: {
         marginBottom: 15,
@@ -173,6 +182,31 @@ export default StyleSheet.create({
         marginTop: 8,
         backgroundColor: 'white'
        },
+       weatheInfoContainer:{
+        backgroundColor: '#f5f5f5',
+        padding: 12,
+        borderRadius: 10,
+        marginVertical: 10,
+       },
+       weatherInfoTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginBottom: 8,
+       },
+       weatherInfoContent:{
+        flexDirection: 'row',
+        alignItems: 'center',
+       },
+       weatherTemp:{
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 10,
+       }, 
+       weatherDesc: {
+        fontSize: 14,
+        color: '#555',
+        marginLeft: 10,
+       }
        
   
 })

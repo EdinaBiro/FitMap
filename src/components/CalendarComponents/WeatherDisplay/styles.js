@@ -93,6 +93,25 @@ export default StyleSheet.create({
         fontSize: 14,
         marginLeft: 10,
         color: '#555',
+    },
+    weatherContainer:{
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        marginBottom: 15,
+    },
+    weatherText: {
+        marginLeft: 10,
+        fontSize: 14,
+        color: '#333',
+    },
+    noDataText:{
+        fontSize: 16,
+        textAlign: 'center',
+        padding: 20,
+        color: '#666'
     }
 });
 

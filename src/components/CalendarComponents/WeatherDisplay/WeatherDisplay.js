@@ -5,8 +5,13 @@ import moment from 'moment';
 import styles from './styles';
 
 const WeatherDisplay = ({weatherData}) => {
-    if(!weatherData) return null;
-
+    if(!weatherData){
+        return(
+            <View style={[styles.container, {backgroundColor: '#f0f0f0'}]}>
+                <Text style={styles.noDataText}>Weather data unavailable</Text>
+            </View>
+        )
+    }
     const getWeatherIcon = (condition) => {
         const conditionMap ={
             'Clear': 'sunny-outline',
@@ -50,19 +55,19 @@ const getWeatherDescription = (condition) => {
     return descriptionMap[condition] || condition;
 };
 
-const condition = weatherData.weather[0].main;
-const temp = Math.round(weatherData.main.temp);
+const condition = weatherData?.weather?.[0]?.main || 'Clear';
+const temp = Math.round(weatherData?.main?.temp || 0);
 const description = getWeatherDescription(condition);
-const highTemp = Math.round(weatherData.main.temp_max);
-const lowTemp = Math.round(weatherData.main.temp_min);
-const cityName= "San Francisco";
+const highTemp = Math.round(weatherData?.main?.temp_max || temp);
+const lowTemp = Math.round(weatherData?.main?.temp_min || temp);
+const cityName= weatherData?.cityName || "San Francisco";
 
-const weekForecast = weatherData.list ?
-    weatherData.list.slice(0,5).map((day, index)=> {
+const weekForecast = weatherData.list && Array.isArray(weatherData.list)
+    ? weatherData.list.slice(0,5).map((day)=> {
         return {
             day: moment(day.dt * 1000).format('ddd'),
-            temp: Math.round(day.main.temp),
-            condition: day.weather[0].main
+            temp: Math.round(day.main?.temp || 0),
+            condition: day.weather?.[0]?.main || 'Clear'
         };
     }) :
 

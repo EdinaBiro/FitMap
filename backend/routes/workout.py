@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.models.workout import Workout
-from backend.models.workoutSchema import WorkoutSchema, WorkoutCreate
+from backend.models.workoutSchema import WorkoutSchema, WorkoutCreate, WorkoutUpdate
 from typing import List
 from datetime import datetime
 from sqlalchemy import desc
@@ -28,7 +28,8 @@ def add_workout(workout_data: WorkoutCreate, db: Session= Depends(get_db)):
             workout_date=workout_data.workout_date,
             start_time=parse_time(workout_data.start_time),
             end_time=parse_time(workout_data.end_time),
-            is_completed= workout_data.is_completed
+            is_completed= workout_data.is_completed,
+            has_reminder=workout_data.has_reminder
         )
 
         db.add(new_workout)
@@ -74,7 +75,7 @@ def get_workout(workout_id: int, db: Session = Depends(get_db)):
     return workout
 
 @router.put("/update_workout/{workout_id}", response_model=WorkoutSchema)
-def update_workout(workout_id: int, workout_data: WorkoutSchema, db: Session = Depends(get_db)):
+def update_workout(workout_id: int, workout_data: WorkoutUpdate, db: Session = Depends(get_db)):
     workout = db.query(Workout).filter(Workout.workout_id == workout_id).first()
     if not workout:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail=f"Workout with id {workout_id} not found")

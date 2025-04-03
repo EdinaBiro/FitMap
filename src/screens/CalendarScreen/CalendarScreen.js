@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'; 
-import { StyleSheet, View, TouchableOpacity,Text, Alert} from 'react-native';
+import { StyleSheet, View, TouchableOpacity,Text, Alert, ScrollView} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import moment, { duration } from 'moment';
@@ -11,15 +11,19 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import {GEMINI_API_KEY} from '@env';
 import {WEATHER_API} from '@env';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+
 
 import WorkoutAgenda from '../../components/CalendarComponents/WorkoutAgenda';
 import ProgressTracker from '../../components/CalendarComponents/ProgressTracker';
 import AgendaItem from '../../components/CalendarComponents/AgendaItem';
 import AddWorkoutModal from '../../components/CalendarComponents/WorkoutModals/AddWorkoutModal';
 import EditWorkoutModal from '../../components/CalendarComponents/WorkoutModals/EditWorkoutModal';
-import WeatherCard from '../../components/CalendarComponents/WeatherDisplay/WeatherCard';
+import WorkoutWeatherForecast from '../../components/CalendarComponents/WeatherDisplay/WorkoutWeatherForecast';
 import { getCurrentPositionAsync } from 'expo-location';
 import CompleteWorkoutModal from '../../components/CalendarComponents/WorkoutModals/CompleteWorkoutModal';
+import { weeksToDays } from 'date-fns';
+
 
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -101,6 +105,15 @@ const CalendarScreen = () => {
     const [workoutToComplete, setWorkoutToComplete] = useState(null);
     const [activeSection, setActiveSection] = useState('agenda');
 
+    const modalWeatherData = weatherData ? {
+        weather: Array.isArray(weatherData.weather) ? weatherData.weather : [{main: 'Clear', description: 'clear sky'}],
+        main: weatherData.main && typeof weatherData.main === 'object' 
+            ? weatherData.main 
+            : {temp: 0, humidity: 0, pressure:0,temp_max: 0, temp_min: 0},
+        name: weatherData.name || "Your Location",
+        list: weatherData.list || []
+    }: null;
+
     const [workoutPlan, setWorkoutPlan] = useState({
         id: '',
         workoutType: '',
@@ -152,75 +165,158 @@ const CalendarScreen = () => {
                 route => route.name === 'CalendarScreen'
             )?.params?.location;
 
-        if(!location){
+        if(location && location.latitude && location.longitude){
 
-            try{
-                const currentLocation = await getCurrentPositionAsync();
-                setUserLocation(currentLocation);
-            }catch(error){
-                console.log('Could not find location: ', location);
-
-                setUserLocation({
-                    latitude:37.7749,
-                    longitude: -122.4194
-                });
-            }
+            console.log('User location from calendar: ', location);
+            setUserLocation(location);
             }else{
-
-                setUserLocation(location);
+                await ensureUserLocation();
             }
 
             if(selectedDate){
                 fetchWeatherData(selectedDate);
             }
+
+            
     });
 
     return unsubscribe;
 },[navigation, selectedDate]);
 
-    const fetchWeatherData = async (date) => {
-        if(!userLocation){
+const ensureUserLocation = async () => {
+    try{
+        const {status} = await Location.requestForegroundPermissionsAsync();
+        if(status !=='granted'){
+            console.log('Location permission denied');
+
+            setUserLocation({
+                latitude: 12.45,
+                longitude: 77.767
+            });
+            return;
+        }
+
+        const location = await getCurrentPositionAsync({});
+        setUserLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude
+        });
+    }catch(error){
+        console.error('Error getting location: ', error);
+
+        setUserLocation({
+            latitude: 12.45,
+            longitude: 77.767
+        });
+    }
+};
+
+useEffect(() => {
+    ensureUserLocation();
+    const user = auth.currentUser;
+    if(user){
+        setUserId(user.uid);
+    }else{
+        console.log('No user is logged in');
+    }
+},[]);
+
+    const fetchWeatherData = async (date=null) => {
+
+        console.log('Starting fetchWeatherData with location: ', userLocation);
+        if(!userLocation || !userLocation.latitude || !userLocation.longitude){
             console.log('No location data available');
             setUserLocation({
                 latitude: 12.45,
                 longitude:77.767
-            })
+            });
+            return {
+                weather: [{main: 'Clear', description: 'clear sky'}],
+                main: {temp: 24, temp_max: 26, temp_min: 22},
+                name: "Deafult Location"
+            };
         }
+
+        const latitude = parseFloat(userLocation.latitude);
+        const longitude = parseFloat(userLocation.longitude);
+
+        if(isNaN(latitude) || isNaN(longitude)){
+            console.error('Invalid coordinates: ', userLocation);
+            return null;
+        }
+
+        const targetDate = date || selectedDate || moment().format('YYYY-MM-DD');
+        console.log('target date for weather: ', targetDate);
+    
 
         try{
 
-            const response = await axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${userLocation.latitude}&lon=${userLocation.longitude}&units=metric&appid=${WEATHER_API}`);
+            //const response = await axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${userLocation.latitude}&lon=${userLocation.longitude}&units=metric&appid=${WEATHER_API}`);
+            const response = await axios.get(
+                `https://api.openweathermap.org/data/2.5/forecast`,
+                {
+                    params: {
+                        lat: latitude,
+                        lon: longitude,
+                        units: 'metric',
+                        appid: WEATHER_API
+                    }
+                }
+            )
+            console.log('API forecast data available: ', 
+                response.data.list.slice(0,3).map(item => 
+                    moment.unix(item.dt).format('YYYY-MM-DD HH:mm')
+                )
+            );
             console.log('Api response: ', response.data);
-            const forecastDate = moment(date).format('YYYY-MM-DD');
 
-            const forecastsForDate = response.data.list.filter(item => 
-                moment.unix(item.dt).format('YYYY-MM-DD') === forecastDate
+            const forecastDate = moment(targetDate).format('YYYY-MM-DD');
+
+            const forecastsForDate = response.data.list.filter(item => {
+                const itemDate=moment.unix(item.dt).format('YYYY-MM-DD');
+                return moment(itemDate).isSame(moment(forecastDate));
+            }
+                
             );
 
             if(forecastsForDate && forecastsForDate.length > 0){
                 const midDayForecast = forecastsForDate.find(item => {
-                    const hour = parseInt(moment.unix(item.dt).format('H'));
+                    const hour = parseInt(moment(item.dt * 1000).format('H'));
                     return hour >=12 && hour <=15;
                 }) || forecastsForDate[0];
 
-                // midDayForecast.list = response.data.list.filter((item, index) => {
-                //     const itemDate = moment.unix(item.dt);
-                //     const hour = parseInt(itemDate.format('H'));
-                //     const dayDiff = itemDate.diff(moment(), 'days');
-                //     return dayDiff >=0 && dayDiff < 5 && hour>=12 && hour <=15;
-                // });
-
+                midDayForecast.list = response.data.list.filter((item,index) => {
+                    return index % 8 ===0;
+                }).slice(0,5);
+                console.log('Weather data processed successfully');
                 setWeatherData(midDayForecast);
                 return midDayForecast;
             }else{
                 console.log('No forecast available for the selected date');
+                const firstAvailable = response.data.list[0];
+                if(firstAvailable){
+                    console.log('Using first available forecast instead');
+                    firstAvailable.list = response.data.list.filter((item, index) => {
+                        return index%8 ===0;
+                    }).slice(0,5);
+                    setWeatherData(null);
+                    return firstAvailable;
+                }
                 setWeatherData(null);
                 return null;
             }
         }catch(error){
             console.error('Error fetching weather data: ', error);
+            if(error.response){
+                console.error('Response status: ', error.resposnse.status);
+                console.error('Response data:', error.response.data);
+            }
             setWeatherData(null);
-            return null;
+            return {
+                weather: [{main: 'Clear', description: 'clear sky'}],
+                main: {temp: 24, temp_max: 26, temp_min: 22},
+                name: "Deafult Location"
+            };
         };
     } 
 
@@ -249,15 +345,21 @@ const CalendarScreen = () => {
                     ? workout.is_completed.toLowerCase() === 'true'
                     : Boolean(workout.is_completed);
 
+                const hasReminder = typeof workout.has_reminder === 'string'
+                    ? workout.has_reminder.toLowerCase() === 'true'
+                    : Boolean(workout.has_reminder)
+
                 formattedWorkouts[workoutDate].push({
                     id: workout.workout_id.toString(),
                     name: workout.workout_name,
+                    type: workout.workout_name,
                     time: workoutTime,
                     distance: workout.distance,
                     duration: workout.duration,
                     calories: workout.calories,
                     pace: workout.pace,
-                    is_completed : isCompleted
+                    is_completed : isCompleted,
+                    reminder: hasReminder
                 });
             });
 
@@ -286,7 +388,7 @@ const CalendarScreen = () => {
             const updatedAgendaItems = {...agendaItems};
             Object.keys(updatedAgendaItems).forEach(date => {
                 updatedAgendaItems[date] = updatedAgendaItems[date].filter(
-                    item => item.id !== workoutId.toString()
+                    item => item.id !== workout.id
                 );
 
                 if(updatedAgendaItems[date].length === 0){
@@ -301,8 +403,15 @@ const CalendarScreen = () => {
                 newMarkedDates[date] = {marked: true, dotColor: '#6200ee'};
             });
             setMarkedDates(newMarkedDates);
+
+            await fetchWorkoutData();
         }catch(error){
             console.error('Error deleting workout: ', error);
+
+            if(error.response) {
+                console.error('Response status:', error.response.status);
+                console.error('Response data: ', error.respose.data);
+            }
             Alert.alert('Error', 'Could not delete the workout. Please try agaian');
         }
     };
@@ -319,11 +428,21 @@ const CalendarScreen = () => {
                 Alert.alert('Error', 'Completed workouts cannot be modified');
                 return;
             }
+
+            const timeFormatted = selectedWorkout.time.includes(':')
+                ? selectedWorkout.time
+                : moment(selectedWorkout.time).format('HH:mm');
+            
             const updatedWorkoutData = {
+                ...workoutDetails.data,
                 workout_name: selectedWorkout.name,
-                start_time: `${selectedWorkout.time}:00`,
+                start_time: timeFormatted.includes(':') && timeFormatted.split(':').length === 2
+                    ? `${timeFormatted}:00`
+                    : `${timeFormatted}`,
                 workout_date: selectedDate || moment().format('YYYY-MM-DD')
             };
+
+            console.log('sending data: ', updatedWorkoutData);
 
             const response = await axios.put(`${baseURL}/workout/update_workout/${selectedWorkout.id}`,
                 updatedWorkoutData,
@@ -495,9 +614,8 @@ const CalendarScreen = () => {
 
             const validTime = workoutPlan.time instanceof Date
                 ? moment(workoutPlan.time).format('HH:mm:ss')
-                : moment().format('HH:mm:ss')
-            // const workoutDate = moment(workoutPlan.date).format('YYYY-MM-DD');
-            // const workoutTime=moment(workoutPlan.time).format('HH:mm:ss');
+                : moment().format('HH:mm:ss');
+           
 
             const formattedDate = validDate;
 
@@ -507,6 +625,7 @@ const CalendarScreen = () => {
                 workout_date: validDate,
                 start_time: validTime,
                 is_completed: false,
+                has_reminder: workoutPlan.reminder || false
             };
            
             console.log('Sending workout data: ', newWorkoutData);
@@ -522,13 +641,18 @@ const CalendarScreen = () => {
             console.log('Response data: ', response.data);
 
             const savedWorkout = response.data;
-            const formattedTime = moment(workoutPlan.time).format('HH:mm');
+            const formattedTime = workoutPlan.time instanceof Date
+                ? moment(workoutPlan.time).format('HH:mm')
+                : moment(workoutPlan.time, 'HH:mm:ss').format('HH:mm');
+
 
             const newWorkout = {
                 id: savedWorkout.workout_id.toString(),
                 name: workoutPlan.workoutType || "Planned Workout",
                 time: formattedTime,
-                is_completed: false
+                type: workoutPlan.workoutType || "Planned Workout",
+                is_completed: false,
+                reminder: workoutPlan.reminder || false
             };
 
             const updatedAgendaItems = {...agendaItems};
@@ -547,7 +671,8 @@ const CalendarScreen = () => {
                 title: '',
                 time: new Date(),
                 date: moment().format('YYYY-MM-DD'),
-                workoutType: ''
+                workoutType: '',
+                reminder: false
             });
             setPlanWorkoutModal(false);
 
@@ -605,6 +730,7 @@ const completeWorkout = async (workoutId, completionData) => {
                             duration: completionData.duration || 0,
                             calories: completionData.calories || 0,
                             pace: completionData.pace || 0,
+                            time: workout
                         };
                     }
                     return workout;
@@ -612,7 +738,7 @@ const completeWorkout = async (workoutId, completionData) => {
 
                 setAgendaItems(updatedAgendaItems);
             }
-            fetchWorkoutData();
+            await fetchWorkoutData();
             Alert.alert('Success', 'Workout completed successfullt');
         }
 
@@ -625,24 +751,63 @@ const completeWorkout = async (workoutId, completionData) => {
 const openPlanWorkoutModal = async (date) => {
 
     const selectedDate = date ? date: moment().format('YYYY-MM-DD');
-    const weather = await fetchWeatherData(selectedDate);
-    setWorkoutPlan(prev => ({
-        ...prev,
-        date: selectedDate,
-        time: new Date(),
-        workoutType: '',
-        reminder: false
-    }));
+    setIsLoading(true);
+    let fetchedWeather = null;
 
-    setWeatherData(weather);
-    console.log('Weather data for modal: ', weather);
+    try{
+        fetchedWeather = await fetchWeatherData(selectedDate);
+        console.log('Weather data received: ', fetchedWeather);
 
-    setPlanWorkoutModal(true);
+        const formattedWeatherData = prepareWeatherDataForecast(fetchedWeather);
+        setWeatherData(formattedWeatherData);
+    }catch(error){
+        console.error('Error while fetching weather data: ', error);
+    }finally{
+        setIsLoading(false);
+        setWorkoutPlan(prev => ({
+            ...prev,
+            date: selectedDate,
+            time: new Date(),
+            workoutType: '',
+            reminder: false
+        }));
+
+        setWeatherData(fetchedWeather);
+        setPlanWorkoutModal(true);
+    }
 };
 
+const prepareWeatherDataForecast = (weatherData) => {
+    if(!weatherData) return null;
 
+    try{
+        const hourlyData = weatherData.list ? weatherData.list.map(item => ({
+            dt: item.dt,
+            temp: item.main.temp,
+            humidity: item.main.humidity,
+            pressure: item.main.pressure,
+            visibility: item.visibility,
+            weather: item.weather,
+            date: new Date(item.dt * 1000)
+        })) : [];
 
-    
+        const formattedWeatherData ={
+            city: weatherData.name || "Your location",
+            current: {
+                temp: weatherData.main ? weatherData.main.temp : 0,
+                humidity: weatherData.main ? weatherData.main.humidity : 0,
+                pressure: weatherData.main ? weatherData.main.pressure : 0,
+                visibility: weatherData.visibility || 0,
+                weather: weatherData.weather || [{main: 'Clear', description: 'clear sky'}]
+            },
+            hourly: hourlyData
+        };
+        return formattedWeatherData;
+    }catch(error){
+        console.error('Error formatting wetaher data: ', error);
+        return null;
+    }
+};
 
     const pickImage = async() => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -758,7 +923,7 @@ const openPlanWorkoutModal = async (date) => {
             );
         }else{
             return(
-                <View>
+                <ScrollView style={styles.progressScrollContainer}>
                     <ProgressTracker
                     image1={image1}
                     image2={image2}
@@ -767,6 +932,7 @@ const openPlanWorkoutModal = async (date) => {
                     PickProgessImage={PickProgessImage}
                     isAnalyzing={isAnalyzing}
                     handleAnalyzeProgress={handleAnalyzeProgress}
+                    analysisResult={analysisResult}
                     />
 
             {analysisResult && (
@@ -776,14 +942,16 @@ const openPlanWorkoutModal = async (date) => {
                  
                     <Text style={styles.analysisHeaderText}>Progress Analysis</Text>
                 </View>
+              
                 <Text style ={styles.analysisResultText}>{analysisResult}</Text>
+          
                 <View style={styles.analysisFooter}>
                     <Ionicons name="heart" size={16} color="#6200ee"/>
                     <Text style={styles.analysisFooterText}>Keep up the great work</Text>
             </View>
         </View>
         )}
-                </View>
+                </ScrollView>
             )
         }
     };
@@ -810,6 +978,8 @@ const openPlanWorkoutModal = async (date) => {
                 {renderActiveSection()}
             </View>
         
+    
+        
        <AddWorkoutModal
        visible={planWorkoutModal}
        onClose={() => setPlanWorkoutModal(false)}
@@ -820,13 +990,14 @@ const openPlanWorkoutModal = async (date) => {
        setShowTimePicker={setShowTimePicker}
        handleTimeChange={handleTimeChange}
        saveWorkoutPlan={saveWorkoutPlan}
-       weatherData={weatherData}
+       weatherData={modalWeatherData}
        />
 
        <EditWorkoutModal
        visible={editWorkoutModal}
        onClose={()=> setEditWorkoutModal(false)}
        selectedWorkout={selectedWorkout}
+       setSelectedWorkout={setSelectedWorkout}
        workouts={workouts}
        showTimePicker={showTimePicker}
        setShowTimePicker={setShowTimePicker}
@@ -896,6 +1067,10 @@ const styles = StyleSheet.create({
     completeAction: {
         backgroundColor: '#4CAF50'
     },
+    progressScrollContainer: {
+        flex:1,
+        paddingBottom: 20,
+    }
 
 
 

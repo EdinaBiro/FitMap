@@ -16,4 +16,5 @@ class Workout(Base):
     start_time = Column(Time,nullable=True)
     end_time = Column(Time,nullable=True)
     is_completed = Column(Boolean, default=False)
+    has_reminder = Column(Boolean, default=False)
 
