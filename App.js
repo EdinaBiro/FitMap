@@ -10,14 +10,14 @@ import { ThemeProvider } from './src/drawerNav/ThemeContext';
 import { navigationRef } from './src/navigation/NavigationRef';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-//import OnBoardingScreen from './src/screens/OnBoardingScreen';
+import OnBoardingScreen from './src/screens/OnBoardingScreen';
 
 export const AuthContext = createContext();
 const App = () => {
 
-  const [user, setUser] = useState(null);
- // const [isFirstLaunch, setIsFirstLaunch] = useState(null);
-  //const [isLoading, setIsLoading] = useState(true);
+const [user, setUser] = useState(null);
+const [isFirstLaunch, setIsFirstLaunch] = useState(null);
+const [isLoading, setIsLoading] = useState(true);
 
   function onAuthStateChanged(user) {
     setUser(user);
@@ -47,24 +47,24 @@ const App = () => {
       // }
     });
 
-    //chechFirstLaunch();
+    // chechFirstLaunch();
 
     return () => {
       authSubsrciber();
     };
   },[]);
   //};
-  //},[isFirstLaunch]);
+  // },[isFirstLaunch]);
 
  
 
-  // if(isLoading){
-  //   return(
-  //     <View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
-  //       <ActivityIndicator size="large"/>
-  //     </View>
-  //   );
-  // }
+  if(isLoading){
+    return(
+      <View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
+        <ActivityIndicator size="large"/>
+      </View>
+    );
+  }
 
   return (
      <AuthContext.Provider value={{ user }}>
@@ -79,7 +79,7 @@ const App = () => {
                 <OnBoardingScreen/>
               ):( */}
                 <Navigation />
-             {/* )} */}
+              {/* )}  */}
               </>
              )}
           </NavigationContainer>
