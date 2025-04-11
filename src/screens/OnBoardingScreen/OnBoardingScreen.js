@@ -1,17 +1,19 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity, Animated, ScrollView, TextInput, Alert } from 'react-native';
+import { Text, View, Image, TouchableOpacity, Animated, ScrollView, TextInput, Alert } from 'react-native';
 import React, { useEffect, useRef, useState} from 'react';
-import { useNavigation, CommonActions} from '@react-navigation/native';
+import { useNavigation, CommonActions, usePreventRemove} from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import Onboarding from 'react-native-onboarding-swiper';
 import Slider from '@react-native-community/slider';
 import { StatusBar } from 'react-native';
+import {styles} from './styles';
+import UserInfoScreen from './UserInfoScreen';
+import { saveOnBoardingData } from '../../services/UserDataService';
 
 
 const OnBoardingScreen = () => {
  const navigation = useNavigation();
- const navigationRef= useRef(navigation);
+ const navigationRef= useRef(null);
  const fadeAnim = useRef(new Animated.Value(0)).current;
  const scaleAnim = useRef(new Animated.Value(0.8)).current;
  const [currentPage, setCurrentPage] = useState(0);
@@ -27,7 +29,14 @@ const OnBoardingScreen = () => {
          prefferedWorkoutType: [],
          medicalConditions: false,
          medicalDetails: '',
+
+         age: '',
+         height: '',
+         weight: '',
+         gender: 'female',
      });
+
+     const MAX_WORKOUTS_SELECTIONS = 3;
 
      const updateResponse = (key, value) => {
       const updatedResponses={
@@ -36,27 +45,42 @@ const OnBoardingScreen = () => {
       }; 
       setUserResponses(updatedResponses);
 
+      if(key === "fitnessLevel"){
+        const timer = setTimeout(() => {
+          handleNextStep();
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+
       if(key === "fitnessGoal") {
+        setUserResponses(prevResponses => ({
+          ...prevResponses,
+          [key]: value
+        }));
         setTimeout(() => {
           handleNextStep();
         }, 400);
-      }else if(key === "workoutFrequency" ){
+        return;
+      } 
+      
+      if( key === "workoutFrequency"){
         setTimeout(() => {
           handleNextStep();
         }, 400);
-      }else if( key === "fitnessLevel"){
-        setTimeout(() => {
-          handleNextStep();
-        }, 400);
-      }  
+        return;
+      }
   };
 
   const safeNavigate = (routeName, params ={})=>{
-    const nav = navigationRef.current || navigation;
 
-    if(nav && nav.navigate){
+    setTimeout(() => {
       try{
-        nav.navigate(routeName,params);
+        if(navigation){
+          navigation.navigate(routeName,params);
+        }else{
+          console.warn("Navigation not available yet");
+        }
+       
       }catch(error){
         console.error('Navigation error', error);
         Alert.alert("Navigation error",
@@ -64,43 +88,38 @@ const OnBoardingScreen = () => {
           [{ text : 'OK'}]
         );
       }
-    }else{
-      setTimeout(() => {
-        const navRetry = navigationRef.current || navigation;
-        if(navRetry && navRetry.navigate){
-          try{
-                 navRetry.navigate(routeName, params);
-          }catch(error){
-            console.error('Navigation retry error: ', error);
-            Alert.alert(
-              "Navigation error",
-              "Unable to navigate at this time. Please try again",
-              [{ text : 'OK'}]
-            );
-          }
-        }else{
-          Alert.alert(
-            "Navigation error",
-            "Unable to navigate at this time. Please try again",
-            [{ text : 'OK'}]
-          );
-        }
-      }, 500);
-    }
+    }, 0);
   };
 
    const toggleWorkoutType = (type) => {
           const currentTypes =[...userResponses.prefferedWorkoutType];
           if(currentTypes.includes(type)){
               updateResponse('prefferedWorkoutType', currentTypes.filter(t => t!=type));
-          }else{
-              updateResponse('prefferedWorkoutType', [...currentTypes, type]);
+               return;
+          }
+
+          if(currentTypes.length >= MAX_WORKOUTS_SELECTIONS){
+            Alert.alert(
+              "Maximum Selections",
+              "You can only select 3 workout types.",
+              [{text: 'oK'}]
+            );
+            return;
+          }
+
+          const updatedTypes = [...currentTypes, type];
+          updateResponse('prefferedWorkoutType', updatedTypes);
+
+          if(updatedTypes.length === MAX_WORKOUTS_SELECTIONS){
+            setTimeout(() => {
+              handleNextStep();
+            }, 800);
           }
           
       };
       const handlePersonalize = () => {
         setShowQuestionnaire(true);
-        setcurrentQuestionIndex(0);
+        setCurrentStep(1);
       }
 
 
@@ -163,8 +182,8 @@ const OnBoardingScreen = () => {
       ]),
     ]).start();
   };
-  const handleNextStep = () => {
-     if(currentStep === 3 && !userResponses.fitnessGoal) {
+  const handleNextStep = async () => {
+     if(currentStep === 5 && !userResponses.prefferedWorkoutType.length === 0) {
       Alert.alert("Selection required", "Please select a fitness goal to continue");
       return;
     }else if(currentStep === 5 && userResponses.prefferedWorkoutType.length ===0){
@@ -175,17 +194,17 @@ const OnBoardingScreen = () => {
       safeNavigate('LoginScreen');
       return;
     }
-    if(showQuestionnaire && currentStep === 6){
-      safeNavigate('LoginScreen', {userResponses});
+    if(currentStep === 9) {
+      await saveOnBoardingData(userResponses);
+      safeNavigate('SignUpScreen');
       return;
     }
-
-    
+  
     if(currentStep === 0){
       if(showQuestionnaire === true){
         setCurrentStep(1);
       }else{
-        setCurrentStep(7);
+        setCurrentStep(8);
       }
     }else{
        const nextStep = currentStep + 1;
@@ -194,11 +213,23 @@ const OnBoardingScreen = () => {
     }
  };
 
- const handlePrevStep = () => {
-  if(currentStep > 0){
-      animateToPrevStep(currentStep - 1);
-      setCurrentStep(currentStep - 1);
+ useEffect(() => {
+  if(currentStep === 8){
+    const timer = setTimeout(() => {
+      setCurrentStep(9);
+    }, 3000);
+    return () => clearTimeout(timer);
   }
+ }, [currentStep]);
+
+ const handlePrevStep = () => {
+  if(currentStep > 1){
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      setTimeout(() => {
+        animateToPrevStep(prevStep);
+      }, 10);
+    }      
 };
 
   useEffect(() => {
@@ -235,9 +266,9 @@ const OnBoardingScreen = () => {
      );
 
   const renderProgressIndicator = () =>{
-    if(!showQuestionnaire || currentStep === 0 || currentStep === 7) return null;
+    if(!showQuestionnaire || currentStep === 0 || currentStep === 8) return null;
 
-    const totalSteps = 6;
+    const totalSteps = 7;
     const currentProgress = Math.min(currentStep, totalSteps);
 
     return(
@@ -273,12 +304,12 @@ const OnBoardingScreen = () => {
                     </Text>
                     <View style={styles.optionsContainer}>
                       <TouchableOpacity style={styles.optionButton} 
-                        onPress={() =>{ setShowQuestionnaire(true); setTimeout(() => {setCurrentStep(1);},50)}}>
+                        onPress={() =>{ setShowQuestionnaire(true);  {setCurrentStep(1); }}}>
                           <Text style={styles.optionButtonText}>Yes, personalize my plan</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                         style={[styles.optionButton, styles.optionButtonSecundary]}
-                        onPress={() => {setShowQuestionnaire(false); safeNavigate('LoginScreen'); }}>
+                        onPress={() => {setShowQuestionnaire(false); setCurrentStep(8); }}>
                           <Text style={styles.optionButtonSecundary}>Skip for now</Text>
                         </TouchableOpacity>
                     </View>
@@ -313,7 +344,8 @@ const OnBoardingScreen = () => {
                    <LottieView source={require('../../../assets/animations/fitness_level_animation.json')}
                           autoPlay
                           loop
-                          style={styles.questionAnimation}/>
+                          style={{width: 300, height: 300}}
+                          />
                       <Text style={styles.questionTitle}>What's your fitness level?</Text>
                       <Text style={styles.questionDescription}>Help us understand where you're starting from</Text>
                   
@@ -355,7 +387,8 @@ const OnBoardingScreen = () => {
                      <LottieView source={require('../../../assets/animations/goals_animation.json')}
                             autoPlay
                             loop
-                            style={styles.questionAnimation}/>
+                            style={{width: 300, height: 300}}
+                            />
                         <Text style={styles.questionTitle}>What's your primary fitness goal?</Text>
                         <Text style={styles.questionDescription}>We'll customize your workouts based on this</Text>
                     
@@ -402,6 +435,7 @@ const OnBoardingScreen = () => {
                             icon="emoji-events"
                             />
                         </View>
+                      
                 </Animated.View>
               );
             case 4:
@@ -410,7 +444,8 @@ const OnBoardingScreen = () => {
                     <LottieView source={require('../../../assets/animations/calendar_animation.json')}
                       autoPlay
                       loop
-                      style={styles.questionAnimation}/>
+                      style={{width: 300, height: 300}}
+                      />
                   <Text style={styles.questionTitle}>How many days per week can you workout?</Text>
                   <Text style={styles.questionDescription}>Be realistic about your availability</Text>
                   
@@ -438,6 +473,11 @@ const OnBoardingScreen = () => {
             case 5:
              return(
                 <Animated.View style={[styles.stepContainer, {opacity: fadeAnim, transform: [{scale:scaleAnim}]}]}>
+                  <LottieView source={require('../../../assets/animations/goals_animation.json')}
+                      autoPlay
+                      loop
+                      style={{width: 300, height: 300}}
+                      />
                   <Text style={styles.questionTitle}>What types of workouts do you enjoy?</Text>
                   <Text style={styles.questionDescription}>Select all that apply</Text>
                   
@@ -458,6 +498,9 @@ const OnBoardingScreen = () => {
                               selected={userResponses.prefferedWorkoutType.includes(item.key)}
                               onPress={() => toggleWorkoutType(item.key)}
                               icon={item.icon}
+                              disabled={userResponses.prefferedWorkoutType.length >=MAX_WORKOUTS_SELECTIONS &&
+                                !userResponses.prefferedWorkoutType.includes(item.key)
+                              }
                               />
                           ))}
                       </View>
@@ -465,13 +508,8 @@ const OnBoardingScreen = () => {
                   <Text style={styles.selectedValue}>
                       {userResponses.prefferedWorkoutType.length === 0
                           ? "Please select at least one workout type"
-                          : `${userResponses.prefferedWorkoutType.length} workout types selected`}
+                          : `${userResponses.prefferedWorkoutType.length}/${MAX_WORKOUTS_SELECTIONS} workout types selected`}
                   </Text>
-                  <TouchableOpacity style={[styles.nextButton, userResponses.prefferedWorkoutType === 0] ? styles.disabledButton: {}}
-                    onPress={handleNextStep} disabled={userResponses.prefferedWorkoutType.length === 0}>
-                    <Text style={styles.nextButtonText}>Finish</Text>
-                    <MaterialIcons name="check" size={20} color="white"/>
-                  </TouchableOpacity>
                 </Animated.View>
               );
             case 6:
@@ -480,12 +518,12 @@ const OnBoardingScreen = () => {
                   <LottieView source={require('../../../assets/animations/medical_animation.json')}
                       autoPlay
                       loop
-                      style={styles.questionAnimation}/>
+                      style={{width: 300, height: 300}}/>
                   <Text style={styles.questionTitle}>Do you have any medical conditions?</Text>
                   <Text style={styles.questionDescription}>This helps us create safe workout plans for you</Text>
                   
                   <View style={styles.yesNoContainer}>
-                  <TouchableOpacity style={[styles.yesNoButton, userResponses.medicalConditions === false ? styles.selectedYesButton: {}
+                  <TouchableOpacity style={[styles.yesNoButton, userResponses.medicalConditions === false ? styles.selectedYesNoButton: {}
                   ]}
                   onPress={() => {
                       updateResponse('medicalConditions',false);
@@ -525,11 +563,85 @@ const OnBoardingScreen = () => {
                         </TouchableOpacity>
                       </View>
                     )}
+                    {/* <TouchableOpacity style={[styles.nextButton, userResponses.prefferedWorkoutType === 0] ? styles.disabledButton: {}}
+                    onPress={handleNextStep} disabled={userResponses.prefferedWorkoutType.length === 0}>
+                    <Text style={styles.nextButtonText}>Finish</Text>
+                    <MaterialIcons name="check" size={20} color="white"/>
+                  </TouchableOpacity> */}
                 </Animated.View>
               );
-            case 7:
+              case 7: 
+              return (
+                <UserInfoScreen
+                userResponses={userResponses}
+                updatedResponse={updateResponse}
+                handleNextStep={handleNextStep}/>
+
+              )
+              case 8: 
+              return(
+                <Animated.View style={[styles.stepContainer, {opacity: fadeAnim, transform: [{scale: scaleAnim}]}]}>
+                  <ScrollView contentContainerStyle={{alignItems: 'center'}} showVerticalScrolndicator={false}>
+                  <LottieView source={require('../../../assets/animations/rocket_animation.json')}
+                        autoPlay
+                        loop
+                        style={{width: 300, height: 300}}/>
+                        <View style={styles.confirmationCard}>
+                          <Text style={styles.confirmationTitle}>Your plan is Ready!</Text>
+                          <Text style={styles.conformationDesciption}>
+                            Based on your preferences we've created a perosnalized AI workout plan tailored scpecifillay for you
+                          </Text>
+  
+                          <View style={styles.planHighlight}>
+                            <View style={styles.highlightItem}>
+                              <MaterialIcons name="check-circle" size={24} color='#6200ee'/>
+                              <Text style={styles.hightlightText}>
+                                {userResponses.workoutFrequency} workout per week
+                              </Text>
+                            </View>
+                            <View style={styles.hightlightItem}>
+                            <MaterialIcons name="check-circle" size={24} color='#6200ee'/>
+                              <Text style={styles.hightlightText}>
+                               Focus on {userResponses.fitnessGoal === 'loseWeight' ? 'weight loss' :
+                                        userResponses.fitnessGoal === 'buildMuscle' ? 'muscle build' :
+                                        userResponses.fitnessGoal === 'improveCardio' ? 'cardiovascular improvement' :
+                                        userResponses.fitnessGoal === 'increaseFlexibility' ? 'flexibility' :
+                                        userResponses.fitnessGoal === 'athleticPerformance' ? 'athletic performance' : 'general fitness'
+                               }
+                              </Text>
+                            </View>
+                            
+                            <View style={styles.hightlightItem}>
+                            <MaterialIcons name="check-circle" size={24} color='#6200ee'/>
+                              <Text style={styles.hightlightText}>
+                               Workouts include {userResponses.prefferedWorkoutType.slice(0,2).map(type => 
+                                  type === 'weightLifting' ? 'weights' :
+                                  type === 'cardio' ? 'cardio' :
+                                  type === 'yoga' ? 'yoga' :
+                                  type === 'hiit' ? 'HIIT' :
+                                  type === 'bodyweight' ? 'bodyweight' :
+                                  type === 'outdoorActivities' ? 'outdoor activities' : 'sports'
+                               ).join(' & ')
+                               }
+                              </Text>
+                            </View>
+                          </View>
+  
+  
+                        </View>
+                        </ScrollView>
+                </Animated.View>
+              );
+            case 9:
                 return(
                   <Animated.View style={[styles.stepContainer, {opacity: fadeAnim, transform: [{scale:scaleAnim}]}]}>
+                    <View style={{width: 250, height:250, marginBottom: 20}}>
+                     <LottieView source={require('../../../assets/animations/target2_animation.json')}
+                        autoPlay
+                        loop
+                        style={{flex: 1, width: '100%', height: '100%'}}/>
+
+                    </View>
                     <Text style={styles.finalTitle}>Ready to Begin?</Text>
                     <View style={styles.socialButtonsContainer}>
                       
@@ -601,423 +713,5 @@ const OnBoardingScreen = () => {
             </LinearGradient>
         );
 };
-
-
-const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    paddingTop: 40,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-  },
-  stepContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    paddingBottom: 80,
-    paddingTop: 40,
-  },
-  animation: {
-    width: 300,
-    height: 300,
-  },
-  animationSmall: {
-    width: 250,
-    height: 250,
-  },
-  questionAnimation: {
-    width: 180,
-    height: 180,
-    marginBottom: 10,
-  },
-  textContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: '#333',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  appNameText: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    marginTop: 5,
-    textShadowColor: 'rgba(0,0,0,0.1)',
-    textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 2,
-  },
-  welcomeDescription: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 10,
-    textAlign: 'center',
-    marginBottom:20,
-  },
-  questionnaireOptions: {
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  questionnairePrompt: {
-    fontSize: 18,
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 20,
-  },
-  optionsContainer: {
-    width: '100%',
-  },
-  optionButton: {
-    backgroundColor: '#6200ee',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  optionButtonSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#6200ee',
-  },
-  optionButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  optionButtonTextSecondary: {
-    color: '#6200ee',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  stepTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  stepDescription: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 40,
-    paddingHorizontal: 10,
-    lineHeight: 24,
-  },
-  questionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 10,
-    textShadowColor: 'rgba(255,255,255,0.7)',
-    textShadowOffset: {width: 0, height: 1},
-    textShadowRadius: 2,
-  },
-  questionDescription: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  sliderContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  sliderLabelsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 5,
-  },
-  sliderLabel: {
-    color: '#666',
-    fontSize: 14,
-  },
-  selectedValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    marginTop: 16,
-    textAlign: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  selectionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  selectionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 15,
-    width: '48%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  selectedButton: {
-    backgroundColor: '#6200ee',
-    borderColor: '#6200ee',
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  selectionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  selectedButtonText: {
-    color: 'white',
-  },
-  circularSelectionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    width: '100%',
-    marginBottom: 20,
-    flexWrap: 'wrap',
-  },
-  circularButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
-    margin: 6,
-  },
-  selectedCircularButton: {
-    backgroundColor: '#6200ee',
-    borderColor: '#6200ee',
-  },
-  circularButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  selectedCircularButtonText: {
-    color: 'white',
-  },
-  scrollableSelections: {
-    maxHeight: 300,
-    width: '100%',
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6200ee',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-    marginTop: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  nextButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-    marginRight: 8,
-  },
-  disabledButton: {
-    backgroundColor: '#cccccc',
-    shadowOpacity: 0.1,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    zIndex: 10,
-    padding: 8,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
-    zIndex: 5,
-  },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 4,
-  },
-  progressDotActive: {
-    backgroundColor: '#6200ee',
-    borderRadius: 5,
-  },
-  socialButtonsContainer: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  facebookButton: {
-    backgroundColor: '#1877f2',
-    borderColor: '#1877f2',
-  },
-  googleButton: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  socialIconLarge: {
-    width: 28,
-    height: 28,
-    marginRight: 12,
-  },
-  socialButtonTextLarge: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  finalTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  authOptions: {
-    width: '100%',
-  },
-  largeActionButton: {
-    backgroundColor: '#6200ee',
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  largeActionButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loginPrompt: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  loginText: {
-    color: '#757575',
-    fontSize: 16
-  },
-  optionButtonSecundary:{
-    backgroundColor: 'transparent',
-    borderColor: '#6200ee',
-    color: '#6200ee',
-  },
-  questionsContainer: {
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  questionItem: {
-    marginBottom: 15,
-  },
-  questionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 10,
-  },
-  navigationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15,
-  },
-  navButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  navButtonText: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  lottieAnimation: {
-    width: 150,
-    height: 150,
-    alignSelf: 'center',
-  },
-
-});
 
 export default OnBoardingScreen;
