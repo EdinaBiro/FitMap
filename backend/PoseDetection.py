@@ -6,6 +6,8 @@ mp_pose = mp.solutions.pose
 
 counter = 0
 stage = None
+posture_feedback = "Stand straight"
+posture_correct = True
 
 cap = cv2.VideoCapture(0)
 
@@ -22,6 +24,37 @@ def calculate_angle(a,b,c):
     
     return angle
 
+def check_posture(landmarks):
+    left_shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+    right_shoulder = [landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
+    left_hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x, landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y]
+    right_hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y]
+    left_elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x, landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
+    right_elbow = [landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
+
+    shoulder_slope = abs(left_shoulder[1] - right_shoulder[1])
+
+    torso_angle_left = calculate_angle(left_shoulder, left_hip, [left_hip[0], 0])
+    torso_angle_right = calculate_angle(right_shoulder, right_hip, [right_hip[0], 0])
+
+    elbow_out_left = left_elbow[0] < left_shoulder[0] - 0.1
+    elbow_out_right = right_elbow[0] > right_shoulder[0] + 0.1
+
+    feedback = []
+    posture_correct = True
+
+    if shoulder_slope > 0.05:
+        feedback.append("Level your shoulders")
+        posture_correct = False
+    if abs(90 - torso_angle_left) > 15 or abs(90 - torso_angle_right) > 15:
+        feedback.append("Keep torso right")
+        posture_correct = False
+    if elbow_out_left or elbow_out_right:
+        feedback.append("Keep elbows close to body")
+        posture_correct = False
+
+    return " | ".join(feedback) if feedback else "Good form", posture_correct
+
 
 
 with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
@@ -37,6 +70,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         try:
 
             landmarks = results.pose_landmarks.landmark
+            posture_feedback, posture_correct = check_posture(landmarks)
             shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
             elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x, landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
             wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x, landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y]
@@ -49,11 +83,12 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
              stage = "down"
             if angle < 30 and stage == "down":
                 stage="up"
-                counter +=1
-                print(counter)
-
-           
-           
+                if posture_correct:
+                    counter +=1
+                    print(f"Good rep: {counter}")
+                else:
+                    print(f"Bas posture: {posture_feedback}")
+            
             #print(landmarks)
 
         except:
@@ -70,6 +105,13 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                     cv2.FONT_HERSHEY_SIMPLEX,0.5, (0,0,0),1, cv2.LINE_AA)
         cv2.putText(image, str(counter), (60,60), cv2.FONT_HERSHEY_SIMPLEX,2, (255,255,255), 2, cv2.LINE_AA)
 
+        feedback_color = (0,255,0) if posture_correct else (0,0,255)
+        cv2.rectangle(image, (10,100), (630, 140), (245, 117, 16), -1)
+        cv2.putText(image, 'PSOTURE', (15,120),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+        cv2.putText(image, posture_feedback, (130, 125),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, feedback_color, 2, cv2.LINE_AA)
+
 
         mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
                                 mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2),
@@ -77,8 +119,6 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
 
         #print(results)
-
- 
 
         cv2.imshow("Image", image)
 

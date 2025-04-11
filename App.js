@@ -10,7 +10,7 @@ import { ThemeProvider } from './src/drawerNav/ThemeContext';
 import { navigationRef } from './src/navigation/NavigationRef';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import OnBoardingScreen from './src/screens/OnBoardingScreen';
+import NavigationProvider from './src/screens/OnBoardingScreen/NavigationProvider';
 
 export const AuthContext = createContext();
 const App = () => {
@@ -24,37 +24,36 @@ const [isLoading, setIsLoading] = useState(true);
   }
 
   useEffect(() => {
-  //   const chechFirstLaunch = async () => {
-  //     try{
-  //       await AsyncStorage.removeItem('alreadyLaunched');
-  //       const value = await AsyncStorage.getItem('alreadyLaunched');
-  //       if(value === null){
-  //         await AsyncStorage.setItem('alreadyLaunched', 'true');
-  //         setIsFirstLaunch(true);
-  //       }else{
-  //         setIsFirstLaunch(false);
-  //       }
-  //     }catch(error){
-  //       console.error('Error checking first launch: ', error);
-  //       setIsFirstLaunch(false);
-  //     }
-  //   };
+    const chechFirstLaunch = async () => {
+      try{
+        //await AsyncStorage.removeItem('alreadyLaunched');
+        const value = await AsyncStorage.getItem('alreadyLaunched');
+        if(value === null){
+          await AsyncStorage.setItem('alreadyLaunched', 'true');
+          setIsFirstLaunch(true);
+        }else{
+          setIsFirstLaunch(false);
+        }
+      }catch(error){
+        console.error('Error checking first launch: ', error);
+        setIsFirstLaunch(false);
+      }finally{
+        setIsLoading(false);
+      }
+    };
 
     const authSubsrciber = auth().onAuthStateChanged(user => {
       setUser(user);
-      // if(isFirstLaunch !== null){
-      //   setIsLoading(false);
-      // }
     });
 
-    // chechFirstLaunch();
+    chechFirstLaunch();
 
     return () => {
       authSubsrciber();
-    };
+  //   };
+  // },[]);
+  };
   },[]);
-  //};
-  // },[isFirstLaunch]);
 
  
 
@@ -75,11 +74,12 @@ const [isLoading, setIsLoading] = useState(true);
               <DrawerNavigation/>
              ) : (
               <>
-              {/* {isFirstLaunch ? (
-                <OnBoardingScreen/>
-              ):( */}
+              {isFirstLaunch ? (
+                <NavigationProvider/>
+              ):(
                 <Navigation />
-              {/* )}  */}
+             
+               )}  
               </>
              )}
           </NavigationContainer>
