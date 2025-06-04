@@ -5,8 +5,8 @@ import {
   Image,
   TouchableOpacity,
   TextInput,
-  ImageBackground,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { Picker } from '@react-native-picker/picker';
@@ -15,6 +15,10 @@ import { ScrollView } from 'react-native-gesture-handler';
 import auth from '@react-native-firebase/auth';
 import { useIsFocused } from '@react-navigation/native';
 import { baseURL } from '../../utils';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 const ProfileScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -36,9 +40,8 @@ const ProfileScreen = () => {
   };
 
   useEffect(() => {
-    const chechAuth = async () => {
+    const checkAuth = async () => {
       setIsLoading(true);
-
       await new Promise((resolve) => setTimeout(resolve, 500));
       const user = auth().currentUser;
       console.log('Auth- check: Current user:', user);
@@ -47,12 +50,12 @@ const ProfileScreen = () => {
         setUserId(user.uid);
       } else {
         console.log('No user is logged in');
-        alert('You must be logge din to acces your profile');
+        alert('You must be logged in to access your profile');
       }
       setIsLoading(false);
     };
 
-    chechAuth();
+    checkAuth();
   }, [isFocused]);
 
   useEffect(() => {
@@ -60,7 +63,7 @@ const ProfileScreen = () => {
       const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
       const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
-        alert('Prmission to access media library and camera is required');
+        alert('Permission to access media library and camera is required');
       }
     })();
   }, [userId]);
@@ -70,8 +73,8 @@ const ProfileScreen = () => {
   }, [profile.height, profile.weight]);
 
   const handleChange = (key, value) => {
-    const numericFileds = ['age', 'height', 'weight', 'activityLevel'];
-    if (numericFileds.includes(key) && value != '') {
+    const numericFields = ['age', 'height', 'weight', 'activityLevel'];
+    if (numericFields.includes(key) && value !== '') {
       value = Number(value);
     }
     setProfile({ ...profile, [key]: value });
@@ -113,7 +116,7 @@ const ProfileScreen = () => {
             profileImage: data.profile_image || null,
           });
         } else {
-          console.log('No existing profile found, will creae one when saving');
+          console.log('No existing profile found, will create one when saving');
           setProfile({
             age: '',
             height: '',
@@ -199,7 +202,7 @@ const ProfileScreen = () => {
         console.error('Error details:', errorData);
       }
     } catch (error) {
-      alert(`An unexpected error occured: ${error.message}`);
+      alert(`An unexpected error occurred: ${error.message}`);
       console.error('Fetch error:', error);
     }
 
@@ -231,6 +234,15 @@ const ProfileScreen = () => {
     }
   };
 
+  const getBMICategory = () => {
+    if (!bmi) return { category: 'Unknown', color: '#9CA3AF' };
+    const bmiValue = parseFloat(bmi);
+    if (bmiValue < 18.5) return { category: 'Underweight', color: '#3B82F6' };
+    if (bmiValue < 25) return { category: 'Normal', color: '#10B981' };
+    if (bmiValue < 30) return { category: 'Overweight', color: '#F59E0B' };
+    return { category: 'Obese', color: '#EF4444' };
+  };
+
   const handleActivityLevelChange = (level) => {
     if (isEditing) {
       const levelNum = parseInt(level);
@@ -239,265 +251,403 @@ const ProfileScreen = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#667eea" />
+        <Text style={styles.loadingText}>Loading your profile...</Text>
+      </View>
+    );
+  }
+
   return (
-    <>
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#555" />
-          <Text>Loading profile...</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.profileContainer}>
-            <View style={styles.profileOverlay}>
-              <Text style={styles.title}>Profile</Text>
-            </View>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <Text style={styles.headerTitle}>My Profile</Text>
+        <Text style={styles.headerSubtitle}>Manage your health information</Text>
+      </LinearGradient>
+
+      <View style={styles.profileImageSection}>
+        <TouchableOpacity onPress={pickImage} style={styles.imageContainer} disabled={!isEditing}>
+          <View style={styles.imageWrapper}>
+            <Image
+              source={
+                profile.profileImage
+                  ? { uri: profile.profileImage }
+                  : require('../../../assets/images/default-avatar.jpg')
+              }
+              style={styles.profileImage}
+            />
+            {isEditing && (
+              <View style={styles.editImageOverlay}>
+                <Ionicons name="camera" size={24} color="white" />
+              </View>
+            )}
           </View>
-          <View style={styles.overlay}>
-            <View style={styles.card}>
-              <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
-                <Image
-                  source={
-                    profile.profileImage
-                      ? { uri: profile.profileImage }
-                      : require('../../../assets/images/default-avatar.jpg')
-                  }
-                  style={styles.profileImage}
-                />
-              </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
 
-              <Text style={styles.label}>Age </Text>
-              <View style={styles.infoBox}>
-                <TextInput
-                  style={styles.input}
-                  editable={isEditing}
-                  value={profile.age}
-                  onChangeText={(text) => handleChange('age', text)}
-                  keyboardType="numeric"
-                />
-              </View>
+      <View style={styles.contentCard}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
 
-              <Text style={styles.label}>Height(cm)</Text>
-              <View style={styles.infoBox}>
-                <TextInput
-                  style={styles.input}
-                  editable={isEditing}
-                  value={profile.height}
-                  onChangeText={(text) => handleChange('height', text)}
-                  keyboardType="numeric"
-                />
-              </View>
+          <View style={styles.inputRow}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Age</Text>
+              <TextInput
+                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                editable={isEditing}
+                value={profile.age}
+                onChangeText={(text) => handleChange('age', text)}
+                keyboardType="numeric"
+                placeholder="Enter age"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
 
-              <Text style={styles.label}>Weight(kg)</Text>
-              <View style={styles.infoBox}>
-                <TextInput
-                  style={styles.input}
-                  editable={isEditing}
-                  value={profile.weight}
-                  onChangeText={(text) => handleChange('weight', text)}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <Text style={styles.label}>Gender</Text>
-              <View style={styles.infoBox}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Gender</Text>
+              <View style={[styles.pickerWrapper, !isEditing && styles.disabledInput]}>
                 <Picker
                   selectedValue={profile.gender}
-                  style={styles.input}
                   enabled={isEditing}
                   onValueChange={(itemValue) => handleChange('gender', itemValue)}
+                  style={styles.picker}
                 >
                   <Picker.Item label="Female" value="female" />
                   <Picker.Item label="Male" value="male" />
                 </Picker>
               </View>
-
-              <Text style={styles.label}>Acivity Level</Text>
-              <View style={styles.activityLevelContainer}>
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <TouchableOpacity
-                    key={level}
-                    style={[styles.circle, profile.activityLevel == level && styles.selectedButton]}
-                    onPress={() => handleActivityLevelChange(level.toString())}
-                  >
-                    <Text style={styles.activityButtonText}>{level}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {hoverText ? <Text style={styles.hoverText}>{hoverText}</Text> : null}
-
-              <View style={styles.bmiContainer}>
-                <Text style={styles.bmiTitle}>YOUR BMI</Text>
-                <Text>{bmi ? bmi : 'BMI will be calculated once you enter your details'}</Text>
-              </View>
-
-              <TouchableOpacity style={styles.button} onPress={isEditing ? handleSave : toggleEdit}>
-                <Text style={styles.buttonText}>{isEditing ? 'Save' : 'Edit Profile'}</Text>
-              </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
-      )}
-    </>
+
+          <View style={styles.inputRow}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Height (cm)</Text>
+              <TextInput
+                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                editable={isEditing}
+                value={profile.height}
+                onChangeText={(text) => handleChange('height', text)}
+                keyboardType="numeric"
+                placeholder="Enter height"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Weight (kg)</Text>
+              <TextInput
+                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                editable={isEditing}
+                value={profile.weight}
+                onChangeText={(text) => handleChange('weight', text)}
+                keyboardType="numeric"
+                placeholder="Enter weight"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Activity Level</Text>
+          <View style={styles.activityLevelContainer}>
+            {[1, 2, 3, 4, 5].map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[styles.activityButton, profile.activityLevel == level && styles.selectedActivityButton]}
+                onPress={() => handleActivityLevelChange(level.toString())}
+                disabled={!isEditing}
+              >
+                <Text
+                  style={[
+                    styles.activityButtonText,
+                    profile.activityLevel == level && styles.selectedActivityButtonText,
+                  ]}
+                >
+                  {level}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {hoverText ? (
+            <Text style={styles.activityDescription}>{hoverText}</Text>
+          ) : (
+            <Text style={styles.activityDescription}>
+              {activityTexts[profile.activityLevel] || 'Select your activity level'}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.bmiSection}>
+          <Text style={styles.sectionTitle}>BMI Calculator</Text>
+          <View style={styles.bmiCard}>
+            <View style={styles.bmiHeader}>
+              <Text style={styles.bmiLabel}>Your BMI</Text>
+              <View style={[styles.bmiCategoryBadge, { backgroundColor: getBMICategory().color }]}>
+                <Text style={styles.bmiCategoryText}>{getBMICategory().category}</Text>
+              </View>
+            </View>
+            <Text style={styles.bmiValue}>{bmi || '--'}</Text>
+            <Text style={styles.bmiDescription}>
+              {bmi ? 'Based on your current height and weight' : 'Enter your details to calculate BMI'}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.actionButton, isEditing && styles.saveButton]}
+          onPress={isEditing ? handleSave : toggleEdit}
+        >
+          <LinearGradient
+            colors={isEditing ? ['#10B981', '#059669'] : ['#667eea', '#764ba2']}
+            style={styles.buttonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Ionicons name={isEditing ? 'checkmark' : 'pencil'} size={20} color="white" style={styles.buttonIcon} />
+            <Text style={styles.buttonText}>{isEditing ? 'Save Changes' : 'Edit Profile'}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
   },
-  overlay: {
-    backgroundColor: '#fff',
-    paddingToop: 20,
-  },
-
-  card: {
-    width: '90%',
-    minHeight: 500,
-    padding: 25,
-    borderRadius: 15,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 10,
-    elavation: 5,
-    paddingTop: 200,
-    justifyContent: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-
-  profileImage: {
-    width: 140,
-    height: 140,
-    borderRadius: 80,
-    marginBottom: 10,
-    alignSelf: 'center',
-  },
-
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'black',
-    width: '100%',
-    lineHeight: 20,
-    color: '#333',
-    textAlign: 'left',
-  },
-  input: {
-    borderColor: '#ccc',
+  loadingContainer: {
     flex: 1,
-    marginLeft: 0,
-    fontSize: 16,
-    color: 'black',
-    width: '80%',
-    marginTop: 10,
-  },
-
-  button: {
-    marginTop: 30,
-    backgroundColor: '#555',
-    padding: 10,
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F8FAFC',
   },
-
-  buttonText: {
+  loadingText: {
+    marginTop: 16,
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 40,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  profileImageSection: {
+    alignItems: 'center',
+    marginTop: -30,
+    zIndex: 1,
   },
   imageContainer: {
-    position: 'absolute',
-    top: 30,
-    left: 100,
-    width: 140,
-    height: 140,
-    borderRadius: 80,
-    borderWidth: 3,
-    borderColor: '#fff',
-    overflow: 'hidden',
-    alignSelf: 'center',
-    backgroundColor: '#fff',
-    marginBottom: 20,
-    backgroundColor: 'gray',
+    marginBottom: 10,
   },
-  infoBox: {
-    width: '100%',
-    padding: 10,
-    borderRadius: 30,
-    backgroundColor: '#fff',
+  imageWrapper: {
+    position: 'relative',
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  profileImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 100,
+    borderWidth: 4,
+    borderColor: 'white',
+  },
+  editImageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#667eea',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  contentCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 10,
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 20,
-    alignItems: 'center',
+  section: {
+    marginBottom: 32,
   },
-  title: {
-    marginTop: 20,
-    fontSize: 25,
-    fontFamily: 'Open Sans',
-    textAlign: 'center',
-    alignSelf: 'center',
-  },
-  bmiContainer: {
-    witdh: '100%',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    marginTop: 20,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 20,
-    alignItems: 'center',
   },
-  bmiTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  inputRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 16,
+  },
+  inputContainer: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  disabledInput: {
+    backgroundColor: '#F3F4F6',
+    color: '#6B7280',
+  },
+  pickerWrapper: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  picker: {
+    color: '#1F2937',
   },
   activityLevelContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '80%',
-    marginTop: 20,
+    marginBottom: 16,
   },
-  circle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+  activityButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  selectedButton: {
-    backgroundColor: '#4CAF50',
+  selectedActivityButton: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
   },
   activityButtonText: {
-    color: '#333',
     fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
   },
-  hoverText: {
-    fontSize: 16,
+  selectedActivityButtonText: {
+    color: 'white',
+  },
+  activityDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
     fontStyle: 'italic',
-    color: '#888',
-    marginTop: 10,
   },
-  loadingContainer: {},
+  bmiSection: {
+    marginBottom: 32,
+  },
+  bmiCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  bmiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  bmiLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  bmiCategoryBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  bmiCategoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+  },
+  bmiValue: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  bmiDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  actionButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+  },
 });
 
 export default ProfileScreen;
