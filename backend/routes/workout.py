@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models.workout import Workout
-from backend.models.workoutSchema import WorkoutSchema, WorkoutCreate, WorkoutUpdate
+from db.database import get_db
+from models.workout import Workout
+from models.workoutSchema import WorkoutSchema, WorkoutCreate, WorkoutUpdate
 from typing import List
 from datetime import datetime
 from sqlalchemy import desc

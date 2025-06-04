@@ -1,25 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,status
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.services.bmi_calculator import calculate_bmi
-from backend.models.userSchema import UserSchema
-from backend.models.profile import Profile
-from backend.models.ProfileSchema import ProfileSchema
-import os
-import shutil
+from db.database import get_db
+from services.bmi_calculator import calculate_bmi
+from models.userSchema import UserSchema
+from models.profile import Profile
+from models.ProfileSchema import ProfileSchema
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 router = APIRouter(prefix="/profile", tags=["profiles"])
 
 
-@router.post("/create_profile")
+@router.post("/create_profile", response_model=ProfileSchema, status_code=status.HTTP_201_CREATED)
 def create_profile(profile_data: ProfileSchema, db: Session = Depends(get_db)):
-    new_profile = Profile(**profile_data.dict())
-    db.add(new_profile)
-    db.commit()
-    db.refresh(new_profile)
-    return new_profile
+    try:
+        new_profile = Profile(**profile_data.dict())
+        db.add(new_profile)
+        db.commit()
+        db.refresh(new_profile)
+        return new_profile
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detaul=str(e))
 
 @router.get("/user/{user_id}")
 def get_user_profile(user_id: str, db: Session=Depends(get_db)):
