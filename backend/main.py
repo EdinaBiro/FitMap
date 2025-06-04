@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from backend.routes import profile, workout, user
-from backend.db.database import engine,Base
+from routes import profile, workout, user
+from db.database import engine,Base
 from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind = engine)

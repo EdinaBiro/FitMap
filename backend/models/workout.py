@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer,Float, Text, Date, ForeignKey,Time, Boolean
-from backend.db.database import Base
+from db.database import Base
 
 
 class Workout(Base):

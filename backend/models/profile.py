@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer,Float, Text
-from backend.db.database import Base
+from db.database import Base
 
 
 class Profile(Base):
