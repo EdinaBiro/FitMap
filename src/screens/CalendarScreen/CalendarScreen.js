@@ -465,39 +465,6 @@ const CalendarScreen = () => {
     setEditWorkoutModal(true);
   };
 
-  //   const renderRightActions = (workout) => {
-  //     return (
-  //       <View style={styles.swipeActionsContainer}>
-  //         {/* {!workout.is_completed && (
-  //                     <TouchableOpacity
-  //                     style={[styles.swipeAction, styles.completeAction]}
-  //                     onPress={() => openCompleteWorkoutModal(workout)}>
-  //                     <Ionicons name="checkmark-circle" size={20} color="white"/>
-  //                     </TouchableOpacity>
-  //                 )} */}
-  //         <TouchableOpacity style={[styles.swipeAction, styles.editAction]} onPress={() => openEditWorkoutModal(workout)}>
-  //           <Ionicons name="pencil" size={20} color="white" />
-  //         </TouchableOpacity>
-
-  //         <TouchableOpacity
-  //           style={[styles.swipeAction, styles.deleteAction]}
-  //           onPress={() => {
-  //             Alert.alert('Delete workout', 'Are you sure you want to delete this workout?', [
-  //               { text: 'Cancel', style: 'cancel' },
-  //               {
-  //                 text: 'Delete',
-  //                 style: 'destructive',
-  //                 onPress: () => deleteWorkout(workout),
-  //               },
-  //             ]);
-  //           }}
-  //         >
-  //           <Ionicons name="trash" size={20} color="white" />
-  //         </TouchableOpacity>
-  //       </View>
-  //     );
-  //   };
-
   const renderRightActions = React.useCallback(
     (workout, closeSwipeable) => {
       const handleDelete = () => {
