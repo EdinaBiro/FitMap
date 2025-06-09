@@ -1,13 +1,14 @@
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity, Button, Modal, Alert, Image} from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity, Button, Modal, Alert, Image } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import {CameraView, useCameraPermissions} from 'expo-camera';
-import { Ionicons} from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { poseAPI } from '../../utils';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PoseVisualization from './PoseVisualization';
+import { TargetType } from '@expo/config-plugins/build/ios/Target';
 
 const { width } = Dimensions.get('window');
 
@@ -23,398 +24,343 @@ const GymScreen = () => {
   const [cameraType, setCameraType] = useState('front');
   const [permission, requestPermission] = useCameraPermissions();
 
-  const [isAnalyzing, setIsAnalyzing] =  useState(false);
-  const [postureFeedback, setPostureFeedback] = useState('Start exercise');
-  const [isGoogPosture, setIsGoodPosture] = useState(true);
-  const [exerciseStage, setExerciseStage] = useState('');
-  const [currentAngle, setCurrentAngle] = useState(0);
-  const [autoAnalyze, setAutoAnalyze] = useState(true);
-  const [lastRepsStage, setLastRepsStage] = useState(null);
-  const [poseKeypoints, setPoseKeypoints] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [videoAnalysisResult, setVideoAnalysisResult] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+  const [postureFeedback, setPostureFeedback] = useState('Ready to record');
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
-  const [exerciseDetected, setExerciseDetected] = useState(false);
-  const [detectionAttempts, setDetectionAttempts] = useState(0);
-  const [isCheckingForExercise, setIsCheckingForExercise] = useState(false);
-  const [frameProcessingEnabled, setFrameProcessingEnabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const lastProcessedTime = useRef(0);
-  const processingInterval = 100;
-
+  const recordingTimer = useRef(null);
   const cameraRef = useRef(null);
   const navigation = useNavigation();
-  const analyzeIntervalRef = useState(null);
-  const detectionIntervalRef = useRef(null);
 
   useEffect(() => {
     return () => {
-      stopAllAnalysis();
-    }
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+      }
+    };
   }, []);
 
-  useEffect(() => {
-    if(autoAnalyze && cameraMode){
-      if(permission?.granted){
-        startExerciseDetection();
-      }
-    }else{
-        stopAllAnalysis();
-    }
-      return () => {
-        stopAllAnalysis();
-      };
-  }, [cameraMode, permission?.granted]);
+  const startRecording = async () => {
+    if (!cameraRef.current) return;
+    try {
+      console.log('Starting video recording...');
+      setIsRecording(true);
+      setRecordingDuration(0);
+      setPostureFeedback('Recording...Perform your exercise');
 
-  const stopAllAnalysis = () => {
-    if(analyzeIntervalRef.current){
-      clearInterval(analyzeIntervalRef.current);
-      analyzeIntervalRef.current = null;
-    }
-    if(detectionIntervalRef.current){
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
-    }
-    setFrameProcessingEnabled(false);
-    setExerciseDetected(false);
-    setIsCheckingForExercise(false);
-  }
+      recordingTimer.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
 
-  const startExerciseDetection = () => {
-    if(isCheckingForExercise) return;
+      const video = await cameraRef.current.recordAsync({
+        quality: '720p',
+        maxDuration: 30,
+        mute: false,
+      });
 
-    setIsCheckingForExercise(true);
-    setDetectionAttempts(0);
-    setFrameProcessingEnabled(true);
-    setPostureFeedback("Looking for exercise pose...");
-    setIsLoading(true);
+      console.log('Video recorded:', video.uri);
+      await uploadAndAnalyzeVideo(video.uri);
+    } catch (error) {
+      console.error('Recording error:', error);
+      Alert.alert('Recording Error', 'Failed to record video.Please try again');
+      stopRecording();
+    }
   };
 
-  const frameProcessor = async (frame) => {
-    console.log("Frame processor called");
+  const stopRecording = async () => {
+    if (!cameraRef.current || !isRecording) return;
 
-    if(!frame){
-      console.log("No frame data received");
-      return;
+    try {
+      console.log('Stopping video recording...');
+      await cameraRef.current.stopRecording();
+      setIsRecording(false);
+      setPostureFeedback('Processing video');
+
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+        recordingTimer.current = null;
+      }
+    } catch (error) {
+      console.error('Stop recording error:', error);
+      setIsRecording(false);
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+        recordingTimer.current = null;
+      }
     }
-    const now = Date.now();
-    if(now - lastProcessedTime.current < processingInterval) return;
+  };
 
-    if(!cameraRef.current || isAnalyzing) {
-      console.log("Skipped frame-camera ref missing or already analyzing");
-      return;
-    }
-    lastProcessedTime.current = now;
-
-    try{
-      console.log("Starting frame analysis");
+  const uploadAndAnalyzeVideo = async (videoUri) => {
+    try {
       setIsAnalyzing(true);
+      setPostureFeedback('Analyzing your exercise form...');
 
-      if(typeof frame.toBase64 !== 'function'){
-        console.log("frame.toBase64 is not a function", typeof frame.toBase64);
-        setIsAnalyzing(false);
-        return;
+      const formData = new FormData();
+      formData.append('exercise', 'bicep_curl'); //TODO: make this dynamic
+      formData.append('video', {
+        uri: videoUri,
+        name: 'exercise.mp4',
+        type: 'video/mp4',
+      });
+
+      console.log('Uploading video to backend');
+
+      const response = await fetch(`${poseAPI.replace('/analyze-pose', '/analyze-video')}`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error, status: ${response.status}`);
       }
 
-      const imageDataPromise = frame.toBase64();
-      const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Timeout')), 3000)
-    );
-      const imageData = await Promise.race([imageDataPromise, timeoutPromise]);
-
-      if(!imageData){
-        console.log("Failed to convert frame to base64");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      let retries = 0;
-      const maxReties = 3;
-      let success = false;
-      let response;
-
-      while(retries < maxReties && !success){
-        try{
-          response = await fetch(poseAPI, {
-          method: 'POST',
-          headers: {
-            'Content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            image: imageData,
-          }),
-        });
-        success = true;
-      }catch(error){
-        console.log(`API call attempt ${retries+1} failed: ${error.message}`);
-        retries++;
-        if(retries>= maxReties) throw error;
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-       
       const result = await response.json();
-      console.log('API repsonse: ', JSON.stringify(result));
-      setIsLoading(false);
+      console.log('Video analysis result:', result);
 
-      if(result.detected){
-          if(!exerciseDetected){
-              console.log("Exercise detected for the first time");
-              setExerciseDetected(true);
-              setPostureFeedback("Exercise detected! Monitoring form...");
-              setIsCheckingForExercise(false);
-            }else{
-              console.log("Exercise pose data:", result.stage, result.posture_correct ? "Good posture" : "Bad posture", result.keypoints ? `${result.keypoints.points?.length || 0} points` : "No keypoints");
-              setPostureFeedback(result.posture_feedback)
-              setIsGoodPosture(result.posture_correct)
-              setExerciseStage(result.stage)
-              setCurrentAngle(result.angle);
+      setVideoAnalysisResult(result);
+      setShowResults(true);
 
-              if(result.keypoints){
-                console.log("Setting pose keypoints with: ", result.keypoints.points?.length || 0, "points and", result.keypoints.connections?.length || 0, "cnnections");
-                setPoseKeypoints(result.keypoints);
-              }else{
-                console.log("No keypoints in result");
-              }
-               if(result.stage === 'up' && lastRepsStage === 'down'){
-                if(result.posture_correct){
-                  setCorrectReps(prev => {
-                    const newCount = prev + 1;
-                    if( newCount % repsPerSet === 0){
-                      setSetsCompleted(prevSets => prevSets + 1);
-                    }
-                    return newCount;
-                  });
-                }else{
-                  setIncorrectReps(prev => prev + 1);
-                }
-              }
-              setLastRepsStage(result.stage);
-            }
-             
-          }else{
-            console.log("No pose detected in frame");
-            if(exerciseDetected){
-              const resetTimeout = setTimeout(() => {
-                setPoseKeypoints(null);
-                setExerciseDetected(false);
-                setPostureFeedback('Exercise Paused, Waiting to resume...');
-              }, 3000);
-              return () => clearTimeout(resetTimeout);
-            }else{
-              incrementDetectonAttempts();
-            }
-          }   
-    }catch(error){
-      console.error('Errror in exercise detection: ', error);
-      incrementDetectonAttempts();
-      setIsLoading(false);
-    }finally{
+      if (result.total_reps) {
+        setCorrectReps((prev) => prev + (result.correct_reps || 0));
+        setIncorrectReps((prev) => prev + (result.incorrect_reps || 0));
+      }
+
+      setPostureFeedback('Analysis complete');
+    } catch (error) {
+      console.error('Video analysis result:', result);
+      Alert.alert('Analysis Error', 'Failed to analyze video.Please check your connection and try again');
+      setPostureFeedback('Analysis failed.Try again');
+    } finally {
       setIsAnalyzing(false);
     }
-    };
+  };
 
-  const incrementDetectonAttempts = () => {
-    setDetectionAttempts(prev => {
-      const newValue = prev + 1;
-      if(newValue === 10 && !exerciseDetected){
-        setPostureFeedback("Please position yourself for exercise");
-      }
-      return newValue;
-    });
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleOpenCamera = async () => {
-    console.log("Opening camera, permission status: ", permission?.granted);
+    console.log('Opening camera, permission status: ', permission?.granted);
     try {
-        if(permission?.granted){
-            console.log("Camera permission already granted");
-            setCameraMode(true);
-            setTimeout(() => {
-               setFrameProcessingEnabled(true);
-               startExerciseDetection();
-            },1000);
-        }else{
-          console.log("Requesting camera permission");
-            setPermissionModalVisible(true);
-    }
+      if (permission?.granted) {
+        console.log('Camera permission already granted');
+        setCameraMode(true);
+      } else {
+        console.log('Requesting camera permission');
+        setPermissionModalVisible(true);
+      }
     } catch (error) {
       console.error('Camera permission error: ', error);
-      Alert.alert("Error", "Failed to access camera. Please try again");
+      Alert.alert('Error', 'Failed to access camera. Please try again');
     }
   };
 
   const handleCloseCamera = () => {
+    if (isRecording) {
+      stopRecording();
+    }
     setCameraMode(false);
     setPostureFeedback('Waiting for exercise...');
-    setIsGoodPosture(true);
-    stopAllAnalysis();
+    setShowResults(false);
+    setVideoAnalysisResult(null);
   };
 
-
   const toggleCameraType = () => {
-    setCameraType((prevType) => (prevType === 'back' ? 'front': 'back'));
+    setCameraType((prevType) => (prevType === 'back' ? 'front' : 'back'));
   };
 
   const PermissionRequestModal = () => (
     <Modal
-    animationType='fade' transparent={true} visible={permissionModalVisible} onRequestClose={() => setPermissionModalVisible(false)}>
+      animationType="fade"
+      transparent={true}
+      visible={permissionModalVisible}
+      onRequestClose={() => setPermissionModalVisible(false)}
+    >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <View style={styles.modalIconContainer}>
-            <Ionicons name="camera" size={50} color="#007bff"/>
+            <Ionicons name="camera" size={50} color="#007bff" />
           </View>
-         <Text style={styles.modalTitle}>Camera Access Needed</Text>
-         <Text style={styles.modalText}> To analyze your exercise form correctly, we need permission to use your camera</Text>
-         <TouchableOpacity style={styles.allowButton} onPress={async () => {
-          const permissionResult = await requestPermission();
-          setPermissionModalVisible(false);
-          if(permissionResult.granted){
-            setCameraMode(true);
-          }else{
-            Alert.alert(
-              "Camera Permission Required",
-              "We need camera access ton analyze your exercise form. Please enable it in your device settings",
-              [{ text: "OK", onPress: () => console.log("ok pressed")}]
-            );
-          }
-         }}>
-          <Text style={styles.allowButtonText}>Allow Camera Access</Text>
-         </TouchableOpacity>
+          <Text style={styles.modalTitle}>Camera Access Needed</Text>
+          <Text style={styles.modalText}>
+            {' '}
+            To analyze your exercise form correctly, we need permission to use your camera
+          </Text>
+          <TouchableOpacity
+            style={styles.allowButton}
+            onPress={async () => {
+              const permissionResult = await requestPermission();
+              setPermissionModalVisible(false);
+              if (permissionResult.granted) {
+                setCameraMode(true);
+              } else {
+                Alert.alert(
+                  'Camera Permission Required',
+                  'We need camera access ton analyze your exercise form. Please enable it in your device settings',
+                  [{ text: 'OK', onPress: () => console.log('ok pressed') }],
+                );
+              }
+            }}
+          >
+            <Text style={styles.allowButtonText}>Allow Camera Access</Text>
+          </TouchableOpacity>
 
-         <TouchableOpacity style={styles.cancelButton} onPress={() => setPermissionModalVisible(false)}>
-          <Text style={styles.cancelButtonText}>Not Now</Text>
-         </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setPermissionModalVisible(false)}>
+            <Text style={styles.cancelButtonText}>Not Now</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 
-  const renderPoseOverlay = () => {
-    if(!poseKeypoints || !poseKeypoints.points || poseKeypoints.points.length < 5) return null;
-    return(
-        <PoseVisualization keypoints={poseKeypoints} cameraType={cameraType}/>
-    );
-  };
+  const ResultsModal = () => (
+    <Modal animationType="slide" transparent={true} visible={showResults} onRequestClose={() => setShowResults(false)}>
+      <View style={styles.centeredView}>
+        <View style={styles.resultsModal}>
+          <Text style={styles.resultsTitle}>Exercise Analysis Results</Text>
+
+          {videoAnalysisResult && (
+            <View style={styles.resultsContent}>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Total Reps:</Text>
+                <Text style={styles.resultValue}>{videoAnalysisResult.total_reps || 0}</Text>
+              </View>
+
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Correct Form:</Text>
+                <Text style={[styles.resultValue, { color: '#4cd964' }]}>{videoAnalysisResult.correct_reps || 0}</Text>
+              </View>
+
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Needs Improvement:</Text>
+                <Text style={[styles.resultValue, { color: '#ff3b30' }]}>
+                  {videoAnalysisResult.incorrect_reps || 0}
+                </Text>
+              </View>
+
+              <View style={styles.feedbackSection}>
+                <Text style={styles.feedbackTitle}>AI Feedback:</Text>
+                <Text style={styles.feedbackText}>
+                  {videoAnalysisResult.feedback || 'Great job! Keep up the good work.'}
+                </Text>
+              </View>
+
+              {videoAnalysisResult.improvement_tips && (
+                <View style={styles.tipsSection}>
+                  <Text style={styles.tipsTitle}>Improvement Tips:</Text>
+                  <Text style={styles.tipsText}>{videoAnalysisResult.improvement_tips}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          <TouchableOpacity style={styles.closeResultsButton} onPress={() => setShowResults(false)}>
+            <Text style={styles.closeResultsText}>Continue Training</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
   const renderGymHomeScreen = () => (
-
     <View style={styles.startContainer}>
-      <Text style={styles.exerciseName}>{exerciseName || 'Exercise Pose Detection'}</Text>
-    <View style={styles.statsContainer}>
-            <Text style={styles.statsTitle}>Your Progress:</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{correctReps}</Text>
-                <Text style={styles.statLabel}>Correct Reps</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{incorrectReps}</Text>
-                <Text style={styles.statLabel}>Incorrect Reps</Text>
-              </View>
-            </View>
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{setsCompleted} / {totalSets}</Text>
-                <Text style={styles.statLabel}>Sets</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{repsPerSet}</Text>
-                <Text style={styles.statLabel}>Reps/Set</Text>
-              </View>
-            </View>
+      <Text style={styles.exerciseName}>{exerciseName || 'Exercise Video Analysis'}</Text>
+      <View style={styles.statsContainer}>
+        <Text style={styles.statsTitle}>Your Progress:</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{correctReps}</Text>
+            <Text style={styles.statLabel}>Correct Reps</Text>
           </View>
-       <TouchableOpacity style={styles.startButton} onPress={handleOpenCamera}>
-          <Ionicons name="camera" size={24} color="white" style={{marginRight: 10}}/>
-          <Text style={styles.startButtonText}>Open Camera</Text>
-       </TouchableOpacity>
-       </View>
-
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{incorrectReps}</Text>
+            <Text style={styles.statLabel}>Incorrect Reps</Text>
+          </View>
+        </View>
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>
+              {setsCompleted} / {totalSets}
+            </Text>
+            <Text style={styles.statLabel}>Sets</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{repsPerSet}</Text>
+            <Text style={styles.statLabel}>Reps/Set</Text>
+          </View>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.startButton} onPress={handleOpenCamera}>
+        <Ionicons name="videocam" size={24} color="white" style={{ marginRight: 10 }} />
+        <Text style={styles.startButtonText}>Start Recording</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const renderCameraScreen = () => (
     <View style={styles.fullScreenContainer}>
       <StatusBar hidden />
 
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={cameraType} enableFrameProcessor={frameProcessingEnabled} frameProcessor={frameProcessor} frameProcessorFps={5}/>
-      {renderPoseOverlay()}
-      {isLoading && (
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={cameraType} />
+
+      {isAnalyzing && (
         <View style={styles.loadingOverlay}>
-          <Text style={styles.loadingText}>Detecting exercise...</Text>
+          <Text style={styles.loadingText}>Analyzing video...</Text>
         </View>
       )}
 
       <SafeAreaView style={styles.cameraControls}>
         <TouchableOpacity style={styles.closeButton} onPress={handleCloseCamera}>
-          <Ionicons name="close" size={28} color="white"/>
+          <Ionicons name="close" size={28} color="white" />
         </TouchableOpacity>
 
         <View style={styles.postureContainer}>
-          <Text style={[
-            styles.postureFeedback, isGoogPosture ?  styles.goodPostureText : styles.badPostureText
-          ]}>
-            {postureFeedback}
-          </Text>
+          <Text style={styles.postureFeedback}>{postureFeedback}</Text>
+          {isRecording && <Text style={styles.recordingDuration}>{formatDuration(recordingDuration)}</Text>}
         </View>
 
         <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
-          <Ionicons name="camera-reverse" size={24} color="white"/>
+          <Ionicons name="camera-reverse" size={24} color="white" />
         </TouchableOpacity>
       </SafeAreaView>
 
-      <View style={styles.statsOverlay}>
-        <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.7)']}
-        style={styles.statsGradient}>
-          <View style={styles.bottomControlRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxTitle}>Reps</Text>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatValue}>{correctReps}</Text>
-                <Text style={styles.miniStatLabel}>Correct</Text>
-              </View>
-              <View styles={styles.miniStat}>
-                <Text style={styles.miniStatValue}>{incorrectReps}</Text>
-                <Text style={styles.miniStatLabel}>Incorrect</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.statBox}>
-            <Text styles={styles.statBoxTitle}>Form</Text>
-            <View style={styles.angleRow}>
-              <Text style={styles.angleValue}>{Math.round(currentAngle)}°</Text>
-              <Text style={styles.stageValue}>{exerciseStage || '-'}</Text>
-            </View>
-          </View>
-
-          <View style={styles.statBox}>
-            <Text style={styles.statBoxTitle}>Progress</Text>
-            <Text style={styles.progressText}>{setsCompleted}/{totalSets} Sets</Text>
-          </View>
-         
-        </LinearGradient>
+      <View style={styles.recordingControls}>
+        <TouchableOpacity
+          style={[styles.recordButton, isRecording ? styles.recordButtonActive : styles.recordButtonInactive]}
+          onPress={isRecording ? stopRecording : startRecording}
+          disabled={isAnalyzing}
+        >
+          <Ionicons name={isRecording ? 'stop' : 'radio-button-on'} size={32} color="white" />
+        </TouchableOpacity>
       </View>
-      </View>
+    </View>
   );
-
 
   return (
     <View style={styles.container}>
       <PermissionRequestModal />
+      <ResultsModal />
 
       {!cameraMode ? (
         <>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{padding: 10}}>
-         <Ionicons name="arrow-back-outline" size={30} color="black"/>
-      </TouchableOpacity>
-      {renderGymHomeScreen()}
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 10 }}>
+            <Ionicons name="arrow-back-outline" size={30} color="black" />
+          </TouchableOpacity>
+          {renderGymHomeScreen()}
         </>
-      ): (
+      ) : (
         renderCameraScreen()
       )}
     </View>
-    
   );
 };
 
@@ -496,7 +442,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Full-screen camera styles
   fullScreenContainer: {
     flex: 1,
     backgroundColor: 'black',

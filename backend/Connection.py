@@ -12,6 +12,13 @@ import json
 
 app = Flask(__name__)
 
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+UPLOAD_FOLDER = 'temp_uploads'
+ALLOWED_ESTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.mkdirs(UPLOAD_FOLDER)
+
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(
     static_image_mode = False,
@@ -24,6 +31,9 @@ pose = mp_pose.Pose(
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_ESTENSIONS
 
 def calculate_angle(a,b,c):
     a = np.array(a)
@@ -158,8 +168,8 @@ def prepare_landmark_data_for_deepseek(landmarks):
     return landmark_data
 
 
-def get_pose_landmarks(image):
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+def get_pose_landmarks(frame):
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = pose.process(image_rgb)
 
     if not results.pose_landmarks:
@@ -175,7 +185,7 @@ def get_pose_landmarks(image):
 
     return landmarks
 
-def query_deepseek(landmark_data, exercise_type):
+def analyze_rep_movements(landmark_data, exercise_type):
 
     if not DEEPSEEK_API_KEY:
         print("Warning: api key not se")
