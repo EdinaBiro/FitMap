@@ -1,14 +1,13 @@
 import { StyleSheet, Text, View, Dimensions, TouchableOpacity, Button, Modal, Alert, Image } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { poseAPI } from '../../utils';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as DocumentPicker from 'expo-document-picker';
 import PoseVisualization from './PoseVisualization';
-import { TargetType } from '@expo/config-plugins/build/ios/Target';
 
 const { width } = Dimensions.get('window');
 
@@ -24,203 +23,135 @@ const GymScreen = () => {
   const [cameraType, setCameraType] = useState('front');
   const [permission, requestPermission] = useCameraPermissions();
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [videoAnalysisResult, setVideoAnalysisResult] = useState(null);
   const [showResults, setShowResults] = useState(false);
-  const [postureFeedback, setPostureFeedback] = useState('Ready to record');
+  const [postureFeedback, setPostureFeedback] = useState('Ready to upload video');
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState('');
 
-  const recordingTimer = useRef(null);
-  const cameraRef = useRef(null);
   const navigation = useNavigation();
 
   useEffect(() => {
-    return () => {
-      if (recordingTimer.current) {
-        clearInterval(recordingTimer.current);
-      }
-    };
+    // Cleanup effect if needed
   }, []);
 
-  const startRecording = async () => {
-    if (!cameraRef.current) return;
+  const pickVideo = async () => {
     try {
-      console.log('Starting video recording...');
-      setIsRecording(true);
-      setRecordingDuration(0);
-      setPostureFeedback('Recording...Perform your exercise');
+      setUploadStatus('Selecting video...');
 
-      recordingTimer.current = setInterval(() => {
-        setRecordingDuration((prev) => prev + 1);
-      }, 1000);
-
-      const video = await cameraRef.current.recordAsync({
-        quality: '720p',
-        maxDuration: 30,
-        mute: false,
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'video/*',
+        copyToCacheDirectory: true,
+        multiple: false,
       });
 
-      console.log('Video recorded:', video.uri);
-      await uploadAndAnalyzeVideo(video.uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const video = result.assets[0];
+        console.log('Selected video:', video);
+
+        // Validate video file
+        if (video.size && video.size > 100 * 1024 * 1024) {
+          // 100MB limit
+          Alert.alert('File Too Large', 'Please select a video smaller than 100MB');
+          setUploadStatus('');
+          return;
+        }
+        7;
+
+        setSelectedVideo(video);
+        setUploadStatus(`Selected: ${video.name}`);
+        setPostureFeedback(`Video selected: ${video.name}`);
+
+        // Automatically analyze the selected video
+        await uploadAndAnalyzeVideo(video.uri);
+      } else {
+        setUploadStatus('');
+        setPostureFeedback('No video selected');
+      }
     } catch (error) {
-      console.error('Recording error:', error);
-      Alert.alert('Recording Error', 'Failed to record video.Please try again');
-      stopRecording();
+      console.error('Video selection error:', error);
+      Alert.alert('Selection Error', 'Failed to select video. Please try again.');
+      setUploadStatus('');
+      setPostureFeedback('Ready to upload video');
     }
   };
 
-  const stopRecording = async () => {
-    if (!cameraRef.current || !isRecording) return;
-
-    try {
-      console.log('Stopping video recording...');
-      await cameraRef.current.stopRecording();
-      setIsRecording(false);
-      setPostureFeedback('Processing video');
-
-      if (recordingTimer.current) {
-        clearInterval(recordingTimer.current);
-        recordingTimer.current = null;
-      }
-    } catch (error) {
-      console.error('Stop recording error:', error);
-      setIsRecording(false);
-      if (recordingTimer.current) {
-        clearInterval(recordingTimer.current);
-        recordingTimer.current = null;
-      }
-    }
-  };
-
-  const uploadAndAnalyzeVideo = async (videoUri) => {
+  const uploadAndAnalyzeVideo = async (uri) => {
     try {
       setIsAnalyzing(true);
       setPostureFeedback('Analyzing your exercise form...');
+      setUploadStatus('Uploading and analyzing...');
 
       const formData = new FormData();
-      formData.append('exercise', 'bicep_curl'); //TODO: make this dynamic
       formData.append('video', {
-        uri: videoUri,
-        name: 'exercise.mp4',
-        type: 'video/mp4',
+        uri: uri,
+        name: selectedVideo?.name || 'exercise.mp4',
+        type: selectedVideo?.mimeType || 'video/mp4',
       });
+      formData.append('exercise', 'bicep_curl');
 
-      console.log('Uploading video to backend');
+      console.log('Uploading video to backend:', uri);
 
-      const response = await fetch(`${poseAPI.replace('/analyze-pose', '/analyze-video')}`, {
+      // 1. First get the raw response
+      const rawResponse = await fetch(`${poseAPI}/analyze-video`, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error, status: ${response.status}`);
+      // 2. Check for HTTP errors first
+      if (!rawResponse.ok) {
+        const errorText = await rawResponse.text();
+        throw new Error(`HTTP ${rawResponse.status}: ${errorText}`);
       }
 
-      const result = await response.json();
-      console.log('Video analysis result:', result);
+      // 3. Parse the JSON only after verifying HTTP status
+      const result = await rawResponse.json();
+      console.log('RAW BACKEND RESPONSE:', result);
 
+      // 4. Verify the structure you expect
+      if (!result || typeof result !== 'object') {
+        throw new Error('Invalid response format from server');
+      }
+
+      // 5. Update state with the actual values from backend
       setVideoAnalysisResult(result);
       setShowResults(true);
 
-      if (result.total_reps) {
-        setCorrectReps((prev) => prev + (result.correct_reps || 0));
-        setIncorrectReps((prev) => prev + (result.incorrect_reps || 0));
-      }
+      // 6. Use the counts DIRECTLY from backend (no addition)
+      setCorrectReps(result.correct_reps ?? 0);
+      setIncorrectReps(result.incorrect_reps ?? 0);
 
-      setPostureFeedback('Analysis complete');
+      setPostureFeedback('Analysis complete! Check your results.');
+      setUploadStatus('Analysis complete');
     } catch (error) {
-      console.error('Video analysis result:', result);
-      Alert.alert('Analysis Error', 'Failed to analyze video.Please check your connection and try again');
-      setPostureFeedback('Analysis failed.Try again');
+      console.error('Analysis failed:', error);
+      Alert.alert('Error', error.message || 'Analysis failed');
+      setPostureFeedback('Analysis failed. Try again');
+      setUploadStatus('Analysis failed');
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const handleOpenCamera = async () => {
-    console.log('Opening camera, permission status: ', permission?.granted);
-    try {
-      if (permission?.granted) {
-        console.log('Camera permission already granted');
-        setCameraMode(true);
-      } else {
-        console.log('Requesting camera permission');
-        setPermissionModalVisible(true);
-      }
-    } catch (error) {
-      console.error('Camera permission error: ', error);
-      Alert.alert('Error', 'Failed to access camera. Please try again');
-    }
+    console.log('Opening video upload mode');
+    setCameraMode(true);
   };
 
   const handleCloseCamera = () => {
-    if (isRecording) {
-      stopRecording();
-    }
     setCameraMode(false);
-    setPostureFeedback('Waiting for exercise...');
+    setPostureFeedback('Ready to upload video');
+    setUploadStatus('');
     setShowResults(false);
     setVideoAnalysisResult(null);
+    setSelectedVideo(null);
   };
 
   const toggleCameraType = () => {
     setCameraType((prevType) => (prevType === 'back' ? 'front' : 'back'));
   };
-
-  const PermissionRequestModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={permissionModalVisible}
-      onRequestClose={() => setPermissionModalVisible(false)}
-    >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <View style={styles.modalIconContainer}>
-            <Ionicons name="camera" size={50} color="#007bff" />
-          </View>
-          <Text style={styles.modalTitle}>Camera Access Needed</Text>
-          <Text style={styles.modalText}>
-            {' '}
-            To analyze your exercise form correctly, we need permission to use your camera
-          </Text>
-          <TouchableOpacity
-            style={styles.allowButton}
-            onPress={async () => {
-              const permissionResult = await requestPermission();
-              setPermissionModalVisible(false);
-              if (permissionResult.granted) {
-                setCameraMode(true);
-              } else {
-                Alert.alert(
-                  'Camera Permission Required',
-                  'We need camera access ton analyze your exercise form. Please enable it in your device settings',
-                  [{ text: 'OK', onPress: () => console.log('ok pressed') }],
-                );
-              }
-            }}
-          >
-            <Text style={styles.allowButtonText}>Allow Camera Access</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setPermissionModalVisible(false)}>
-            <Text style={styles.cancelButtonText}>Not Now</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
 
   const ResultsModal = () => (
     <Modal animationType="slide" transparent={true} visible={showResults} onRequestClose={() => setShowResults(false)}>
@@ -232,7 +163,7 @@ const GymScreen = () => {
             <View style={styles.resultsContent}>
               <View style={styles.resultRow}>
                 <Text style={styles.resultLabel}>Total Reps:</Text>
-                <Text style={styles.resultValue}>{videoAnalysisResult.total_reps || 0}</Text>
+                <Text style={styles.resultValue}>{videoAnalysisResult.reps || 0}</Text>
               </View>
 
               <View style={styles.resultRow}>
@@ -300,54 +231,75 @@ const GymScreen = () => {
         </View>
       </View>
       <TouchableOpacity style={styles.startButton} onPress={handleOpenCamera}>
-        <Ionicons name="videocam" size={24} color="white" style={{ marginRight: 10 }} />
-        <Text style={styles.startButtonText}>Start Recording</Text>
+        <Ionicons name="cloud-upload" size={24} color="white" style={{ marginRight: 10 }} />
+        <Text style={styles.startButtonText}>Upload Video</Text>
       </TouchableOpacity>
     </View>
   );
 
-  const renderCameraScreen = () => (
+  const renderUploadScreen = () => (
     <View style={styles.fullScreenContainer}>
       <StatusBar hidden />
 
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={cameraType} />
+      <View style={styles.uploadBackground}>
+        {isAnalyzing && (
+          <View style={styles.loadingOverlay}>
+            <Text style={styles.loadingText}>Analyzing video...</Text>
+          </View>
+        )}
 
-      {isAnalyzing && (
-        <View style={styles.loadingOverlay}>
-          <Text style={styles.loadingText}>Analyzing video...</Text>
+        <SafeAreaView style={styles.cameraControls}>
+          <TouchableOpacity style={styles.closeButton} onPress={handleCloseCamera}>
+            <Ionicons name="close" size={28} color="white" />
+          </TouchableOpacity>
+
+          <View style={styles.postureContainer}>
+            <Text style={styles.postureFeedback}>{postureFeedback}</Text>
+            {uploadStatus ? <Text style={styles.uploadStatus}>{uploadStatus}</Text> : null}
+          </View>
+
+          <View style={styles.placeholderButton} />
+        </SafeAreaView>
+
+        <View style={styles.uploadContent}>
+          <View style={styles.uploadIcon}>
+            <Ionicons name="cloud-upload-outline" size={80} color="rgba(255,255,255,0.8)" />
+          </View>
+
+          <Text style={styles.uploadTitle}>Upload Exercise Video</Text>
+          <Text style={styles.uploadSubtitle}>Select a video from your device to analyze your exercise form</Text>
+
+          {selectedVideo && (
+            <View style={styles.selectedVideoInfo}>
+              <Ionicons name="videocam" size={24} color="#4cd964" />
+              <Text style={styles.selectedVideoText}>{selectedVideo.name}</Text>
+            </View>
+          )}
         </View>
-      )}
 
-      <SafeAreaView style={styles.cameraControls}>
-        <TouchableOpacity style={styles.closeButton} onPress={handleCloseCamera}>
-          <Ionicons name="close" size={28} color="white" />
-        </TouchableOpacity>
+        <View style={styles.uploadControls}>
+          <TouchableOpacity
+            style={[styles.uploadButton, isAnalyzing && styles.uploadButtonDisabled]}
+            onPress={pickVideo}
+            disabled={isAnalyzing}
+          >
+            <Ionicons name="folder-open" size={24} color="white" style={{ marginRight: 10 }} />
+            <Text style={styles.uploadButtonText}>{selectedVideo ? 'Select Different Video' : 'Select Video'}</Text>
+          </TouchableOpacity>
 
-        <View style={styles.postureContainer}>
-          <Text style={styles.postureFeedback}>{postureFeedback}</Text>
-          {isRecording && <Text style={styles.recordingDuration}>{formatDuration(recordingDuration)}</Text>}
+          {selectedVideo && !isAnalyzing && (
+            <TouchableOpacity style={styles.analyzeButton} onPress={() => uploadAndAnalyzeVideo(selectedVideo.uri)}>
+              <Ionicons name="analytics" size={24} color="white" style={{ marginRight: 10 }} />
+              <Text style={styles.analyzeButtonText}>Analyze Again</Text>
+            </TouchableOpacity>
+          )}
         </View>
-
-        <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
-          <Ionicons name="camera-reverse" size={24} color="white" />
-        </TouchableOpacity>
-      </SafeAreaView>
-
-      <View style={styles.recordingControls}>
-        <TouchableOpacity
-          style={[styles.recordButton, isRecording ? styles.recordButtonActive : styles.recordButtonInactive]}
-          onPress={isRecording ? stopRecording : startRecording}
-          disabled={isAnalyzing}
-        >
-          <Ionicons name={isRecording ? 'stop' : 'radio-button-on'} size={32} color="white" />
-        </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <PermissionRequestModal />
       <ResultsModal />
 
       {!cameraMode ? (
@@ -358,7 +310,7 @@ const GymScreen = () => {
           {renderGymHomeScreen()}
         </>
       ) : (
-        renderCameraScreen()
+        renderUploadScreen()
       )}
     </View>
   );
@@ -441,10 +393,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-
   fullScreenContainer: {
     flex: 1,
     backgroundColor: 'black',
+  },
+  uploadBackground: {
+    flex: 1,
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#667eea',
   },
   cameraControls: {
     position: 'absolute',
@@ -465,13 +421,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  flipButton: {
+  placeholderButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   postureContainer: {
     paddingHorizontal: 15,
@@ -483,136 +435,100 @@ const styles = StyleSheet.create({
   postureFeedback: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
   },
-  goodPostureText: {
+  uploadStatus: {
+    fontSize: 12,
     color: '#4cd964',
+    textAlign: 'center',
+    marginTop: 2,
   },
-  badPostureText: {
-    color: '#ff3b30',
-  },
-
-  statsOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 2,
-  },
-  statsGradient: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  bottomControlsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statBoxTitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginBottom: 5,
-  },
-  statBoxRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  miniStat: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  miniStatValue: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  miniStatLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  angleBox: {
-    alignItems: 'center',
-  },
-  angleValue: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  stageValue: {
-    color: '#fff',
-    fontSize: 14,
-    textTransform: 'uppercase',
-  },
-  progressText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  centeredView: {
+  uploadContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 40,
   },
-  modalView: {
-    margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    width: width * 0.85,
+  uploadIcon: {
+    marginBottom: 30,
+    opacity: 0.8,
   },
-  modalIcon: {
-    width: 80,
-    height: 80,
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
+  uploadTitle: {
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: 'white',
     textAlign: 'center',
+    marginBottom: 15,
   },
-  modalText: {
-    marginBottom: 20,
-    textAlign: 'center',
+  uploadSubtitle: {
     fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
     lineHeight: 24,
-    color: '#555',
+    marginBottom: 30,
   },
-  allowButton: {
+  selectedVideoInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+    marginTop: 20,
+  },
+  selectedVideoText: {
+    color: 'white',
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  uploadControls: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  uploadButton: {
     backgroundColor: '#007bff',
     paddingVertical: 15,
     paddingHorizontal: 30,
-    borderRadius: 10,
-    width: '100%',
+    borderRadius: 25,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    minWidth: 200,
+    marginBottom: 15,
+    shadowColor: '#007bff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
   },
-  allowButtonText: {
+  uploadButtonDisabled: {
+    backgroundColor: 'rgba(0,123,255,0.5)',
+    opacity: 0.6,
+  },
+  uploadButtonText: {
     color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
-    fontSize: 16,
   },
-  cancelButton: {
-    paddingVertical: 15,
-    width: '100%',
+  analyzeButton: {
+    backgroundColor: '#4cd964',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelButtonText: {
-    color: '#555',
-    fontSize: 16,
+  analyzeButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   loadingOverlay: {
     position: 'absolute',
@@ -622,22 +538,116 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    zIndex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 3,
   },
   loadingText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    padding: 20,
+    borderRadius: 15,
+    textAlign: 'center',
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  resultsModal: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    width: width * 0.9,
+    maxHeight: '80%',
+  },
+  resultsTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+  },
+  resultsContent: {
+    width: '100%',
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  resultLabel: {
+    fontSize: 16,
+    color: '#555',
+    fontWeight: '500',
+  },
+  resultValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007bff',
+  },
+  feedbackSection: {
+    marginTop: 20,
     padding: 15,
+    backgroundColor: '#f8f9fa',
     borderRadius: 10,
   },
-  angleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    width: '100%',
+  feedbackTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
+  },
+  feedbackText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#666',
+  },
+  tipsSection: {
+    marginTop: 15,
+    padding: 15,
+    backgroundColor: '#fff3cd',
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ffc107',
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#856404',
+  },
+  tipsText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#856404',
+  },
+  closeResultsButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    marginTop: 20,
+  },
+  closeResultsText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 
