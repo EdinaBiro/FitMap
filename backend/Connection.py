@@ -341,37 +341,119 @@ def summarize_pose_data(landmarks_sequence, exercise_type):
                 summary["key_observations"].append(f"{frame_name}_elbow_angle: {angle: 1.f}°")
     return json.dumps(summary, indent=2)
 
-def generate_ai_feedback(exercise_type,landmarks_sequence,rep_analysis):
+# def generate_ai_feedback(exercise_type,landmarks_sequence,rep_analysis):
 
+#     if not DEEPSEEK_API_KEY:
+#         print("Warning: api key not se")
+#         return {
+#             "success" : False,
+#             "message" : "Api key not configured"
+#         }
+    
+#     pose_summary = summarize_pose_data(landmarks_sequence, exercise_type)
+#     prompt = f"""
+#     You are an expert fitness trainer analyzing form. The user performed '{exercise_type}'
+
+#     Analysis Results:
+#     - Total Reps: {rep_analysis['reps']}
+#     - Correct Form Reps: {rep_analysis['correct_reps']}
+#     - Poor Form Reps: {rep_analysis['incorrect_reps']}
+    
+#     Pose Data Summary:
+#     {pose_summary}
+    
+#     Provide constructive feedback in this exact JSON format:
+#     {{
+#         "feedback": "Overall assessment of the exercise performance",
+#         "correct": true/false,
+#         "issues": ["specific issue 1", "specific issue 2"],
+#         "improvement_tips": "Specific tips to improve form and technique",
+#         "positive_points": "What the user did well"
+#     }}
+    
+#     ONLY respond with valid JSON following the above structure. No additional text.
+#     """
+    
+#     headers = {
+#         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+#         "Content-Type": "application/json"
+#     }
+    
+#     payload = {
+#         "model": "deepseek-chat",
+#         "messages": [
+#             {"role": "user", "content": prompt}
+#         ],
+#         "temperature": 0.7,
+#         "response_format": {"type": "json_object"}
+#     }
+    
+#     try:
+#         response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers, timeout=30)
+#         if response.status_code == 200:
+#             content = response.json()
+#             if "choices" in content and len(content["choices"]) > 0:
+#                 feedback_text = content["choices"][0]["message"]["content"]
+#                 feedback_json = json.loads(feedback_text)
+#                 return {
+#                     "success": True,
+#                     **feedback_json
+#                 }
+#         return {
+#             "success": False,
+#             "message": f"API Error: {response.status_code}",
+#             "details": response.text
+#         }
+#     except Exception as e:
+#         return {
+#             "success": False,
+#             "message": f"Error: {str(e)}"
+#         }
+
+def generate_ai_feedback(exercise_type, landmarks_sequence, rep_analysis):
+    """Generate friendly fitness feedback using AI with emojis and natural language"""
+    
     if not DEEPSEEK_API_KEY:
-        print("Warning: api key not se")
+        print("⚠️ Warning: API key not set - cannot provide AI feedback")
         return {
-            "success" : False,
-            "message" : "Api key not configured"
+            "success": False,
+            "message": "Our fitness coach is unavailable right now 🏋️‍♂️"
         }
     
+    # Create a simple summary of the workout
     pose_summary = summarize_pose_data(landmarks_sequence, exercise_type)
+    
     prompt = f"""
-    You are an expert fitness trainer analyzing form. The user performed '{exercise_type}'
+    🏋️‍♀️ You're a world-class fitness coach analyzing a {exercise_type} workout. 
+    The user completed:
+    - Total reps: {rep_analysis['reps']} 💪
+    - Good form reps: {rep_analysis['correct_reps']} ✅
+    - Needs improvement reps: {rep_analysis['incorrect_reps']} ❌
 
-    Analysis Results:
-    - Total Reps: {rep_analysis['reps']}
-    - Correct Form Reps: {rep_analysis['correct_reps']}
-    - Poor Form Reps: {rep_analysis['incorrect_reps']}
-    
-    Pose Data Summary:
+    Technical analysis:
     {pose_summary}
-    
-    Provide constructive feedback in this exact JSON format:
+
+    Provide warm, encouraging feedback in this EXACT format (ONLY JSON):
     {{
-        "feedback": "Overall assessment of the exercise performance",
-        "correct": true/false,
-        "issues": ["specific issue 1", "specific issue 2"],
-        "improvement_tips": "Specific tips to improve form and technique",
-        "positive_points": "What the user did well"
+        "overall": "Brief motivational summary with 1-2 emojis",
+        "score": "X/10 rating",
+        "whats_good": [
+            "Specific things they did well with emojis",
+            "Another positive point"
+        ],
+        "to_improve": [
+            "Specific form issue with simple fix",
+            "Another area for improvement"
+        ],
+        "pro_tip": "One actionable tip to implement next time",
+        "encouragement": "Final motivational note with emoji"
     }}
-    
-    ONLY respond with valid JSON following the above structure. No additional text.
+
+    Rules:
+    1. Keep it positive and constructive 🌟
+    2. Use simple language and 1-2 emojis per section
+    3. Never discourage - always motivate!
+    4. ONLY respond with valid JSON
     """
     
     headers = {
@@ -381,33 +463,41 @@ def generate_ai_feedback(exercise_type,landmarks_sequence,rep_analysis):
     
     payload = {
         "model": "deepseek-chat",
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
+        "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
         "response_format": {"type": "json_object"}
     }
     
     try:
+        print("🔍 Analyzing your workout with our AI coach...")
         response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers, timeout=30)
+        
         if response.status_code == 200:
             content = response.json()
-            if "choices" in content and len(content["choices"]) > 0:
-                feedback_text = content["choices"][0]["message"]["content"]
-                feedback_json = json.loads(feedback_text)
+            if "choices" in content and content["choices"]:
+                feedback = json.loads(content["choices"][0]["message"]["content"])
                 return {
                     "success": True,
-                    **feedback_json
+                    "coach_feedback": {
+                        "summary": f"🏆 {feedback.get('overall', 'Nice workout!')}",
+                        "score": feedback.get("score", "8/10"),
+                        "strengths": feedback.get("whats_good", []),
+                        "improvements": feedback.get("to_improve", []),
+                        "tip": f"💡 Pro Tip: {feedback.get('pro_tip', 'Keep consistent form')}",
+                        "motivation": f"✨ {feedback.get('encouragement', 'You got this!')}"
+                    }
                 }
+        
         return {
             "success": False,
-            "message": f"API Error: {response.status_code}",
-            "details": response.text
+            "message": "😅 Our coach is busy right now - try again later!"
         }
+        
     except Exception as e:
+        print(f"⚠️ Error talking to AI coach: {str(e)}")
         return {
             "success": False,
-            "message": f"Error: {str(e)}"
+            "message": "🚧 Technical difficulty - your human coach will help instead!"
         }
 
 def process_video_with_mediapipe(video_path, exercise_type):
@@ -538,6 +628,64 @@ def analyze_pose():
         return jsonify({'error': str(e)}), 500
 
 
+# @app.route('/analyze-video', methods=['POST'])
+# def analyze_video():
+#     if 'video' not in request.files:
+#         return jsonify({"error": "No file part"}), 400
+
+#     file = request.files['video']
+#     if file.filename == '':
+#         return jsonify({"error": "No selected file"}), 400
+
+#     if file and allowed_file(file.filename):
+#         filename = secure_filename(file.filename)
+#         filepath = os.path.join(UPLOAD_FOLDER, filename)
+#         file.save(filepath)
+
+#         cap = cv2.VideoCapture(filepath)
+#         frame_count = 0
+#         landmark_sequence = []
+
+#         while cap.isOpened():
+#             ret, frame = cap.read()
+#             if not ret:
+#                 break
+#             frame_count += 1
+#             if frame_count % 5 != 0:
+#                 continue
+
+#             image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#             result = pose.process(image_rgb)
+
+#             if result.pose_landmarks:
+#                 landmarks = []
+#                 for lm in result.pose_landmarks.landmark:
+#                     landmarks.append({
+#                         'x': lm.x,
+#                         'y': lm.y,
+#                         'z': lm.z,
+#                         'visibility': lm.visibility
+#                     })
+#                 landmark_sequence.append(landmarks)
+
+#         cap.release()
+#         os.remove(filepath)
+
+#         if not landmark_sequence:
+#             return jsonify({"error": "No poses detected in video"}), 400
+
+#         exercise_type = detect_exercise_type(result.pose_landmarks.landmark)
+#         analysis = analyze_rep_movement(landmark_sequence, exercise_type)
+#         return jsonify({
+#             "exercise": exercise_type,
+#             "correct_reps": analysis.get("correct_reps", 0),
+#             "incorrect_reps": analysis.get("incorrect_reps", 0),
+#             "reps": analysis.get("correct_reps", 0) + analysis.get("incorrect_reps", 0) ,
+#         })
+      
+
+#     return jsonify({"error": "File type not allowed"}), 400
+
 @app.route('/analyze-video', methods=['POST'])
 def analyze_video():
     if 'video' not in request.files:
@@ -584,15 +732,34 @@ def analyze_video():
         if not landmark_sequence:
             return jsonify({"error": "No poses detected in video"}), 400
 
+        # Detect exercise type and analyze reps
         exercise_type = detect_exercise_type(result.pose_landmarks.landmark)
-        analysis = analyze_rep_movement(landmark_sequence, exercise_type)
-        return jsonify({
+        rep_analysis = analyze_rep_movement(landmark_sequence, exercise_type)
+        
+        # Generate AI feedback
+        ai_feedback = generate_ai_feedback(exercise_type, landmark_sequence, rep_analysis)
+        
+        # Prepare response
+        response = {
             "exercise": exercise_type,
-            "correct_reps": analysis.get("correct_reps", 0),
-            "incorrect_reps": analysis.get("incorrect_reps", 0),
-            "reps": analysis.get("correct_reps", 0) + analysis.get("incorrect_reps", 0) ,
-        })
-      
+            "correct_reps": rep_analysis.get("correct_reps", 0),
+            "incorrect_reps": rep_analysis.get("incorrect_reps", 0),
+            "total_reps": rep_analysis.get("correct_reps", 0) + rep_analysis.get("incorrect_reps", 0),
+            "feedback": rep_analysis.get("feedback", []),
+            "using_ai": False
+        }
+        
+        # Include AI feedback if available
+        if ai_feedback.get("success", False):
+            response.update({
+                "ai_feedback": ai_feedback.get("feedback", "No specific feedback"),
+                "ai_issues": ai_feedback.get("issues", []),
+                "ai_improvement_tips": ai_feedback.get("improvement_tips", "Keep practicing!"),
+                "ai_positive_points": ai_feedback.get("positive_points", "Good effort!"),
+                "using_ai": True
+            })
+        
+        return jsonify(response)
 
     return jsonify({"error": "File type not allowed"}), 400
 

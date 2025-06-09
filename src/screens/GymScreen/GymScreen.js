@@ -163,7 +163,7 @@ const GymScreen = () => {
             <View style={styles.resultsContent}>
               <View style={styles.resultRow}>
                 <Text style={styles.resultLabel}>Total Reps:</Text>
-                <Text style={styles.resultValue}>{videoAnalysisResult.reps || 0}</Text>
+                <Text style={styles.resultValue}>{videoAnalysisResult.total_reps || 0}</Text>
               </View>
 
               <View style={styles.resultRow}>
