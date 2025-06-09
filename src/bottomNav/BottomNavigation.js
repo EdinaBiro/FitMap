@@ -9,6 +9,7 @@ import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
 import { Platform } from 'react-native';
 import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
+import PersonalPlanScreen from '../screens/PersonalPlanScreen/PersonalPlanScreen';
 
 const TabArray = [
   {
@@ -49,7 +50,7 @@ const TabArray = [
     type: 'Ionicons',
     activeIcon: 'rocket',
     inActiveIcon: 'rocket-outline',
-    component: SocialMediaScreen,
+    component: PersonalPlanScreen,
   },
 ];
 

@@ -1,4 +1,4 @@
-import { Text, View, Image, TouchableOpacity, Animated, ScrollView, TextInput, Alert } from 'react-native';
+import { Text, View, Image, TouchableOpacity, Animated, ScrollView, TextInput, Alert, Touchable } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigation, CommonActions, usePreventRemove } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,7 +8,9 @@ import Slider from '@react-native-community/slider';
 import { StatusBar } from 'react-native';
 import { styles } from './styles';
 import UserInfoScreen from './UserInfoScreen';
-import { saveOnBoardingData } from '../../services/UserDataService';
+import { saveOnBoardingData } from '../../services/WorkoutPlanService';
+import { baseURL } from '../../utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const OnBoardingScreen = () => {
   const navigation = useNavigation();
@@ -18,6 +20,7 @@ const OnBoardingScreen = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [showQuestionnaire, setShowQuestionnaire] = useState(null);
   const [currentQuestionIndex, setcurrentQuestionIndex] = useState(0);
+  const [hasCompletedQuestionnaire, setHasCompletedQuestionnaire] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [userResponses, setUserResponses] = useState({
@@ -35,7 +38,85 @@ const OnBoardingScreen = () => {
     gender: 'female',
   });
 
+  const getAuthToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      return token;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  };
   const MAX_WORKOUTS_SELECTIONS = 3;
+
+  const checkQuestionnaireStatus = async () => {
+    try {
+      const token = await getAuthToken();
+
+      if (!token) {
+        return { completed: false };
+      }
+
+      const response = await fetch(`${baseURL}/plan/questionnaire-status`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error status: ${response.status}`);
+      }
+      const data = await response.json();
+      return {
+        completed: data.completed || false,
+        completed_at: data.completed_at,
+      };
+    } catch (error) {
+      console.error('Error in checkQuestionnairestatus:', error);
+      return { completed: false };
+    }
+  };
+
+  const saveOnBoardingDataToServer = async (userData) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('No auth token');
+
+      const response = await fetch(`${baseURL}/plan/onboarding`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+      console.log('Sending onboardingToServer data: ', userData);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error saving onboarding data to server: ', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await checkQuestionnaireStatus();
+        setHasCompletedQuestionnaire(status.completed);
+      } catch (error) {
+        console.error('Error checking questionnaire status:', error);
+        setHasCompletedQuestionnaire(false);
+      }
+    };
+    checkStatus();
+  }, []);
 
   const updateResponse = (key, value) => {
     const updatedResponses = {
@@ -56,9 +137,9 @@ const OnBoardingScreen = () => {
         ...prevResponses,
         [key]: value,
       }));
-      setTimeout(() => {
-        handleNextStep();
-      }, 400);
+      // setTimeout(() => {
+      //   handleNextStep();
+      // }, 400);
       return;
     }
 
@@ -174,20 +255,45 @@ const OnBoardingScreen = () => {
     ]).start();
   };
   const handleNextStep = async () => {
-    if (currentStep === 5 && !userResponses.prefferedWorkoutType.length === 0) {
+    console.log('handleNextStep called, currentStep =', currentStep);
+    if (currentStep === 3 && !userResponses.fitnessGoal) {
       Alert.alert('Selection required', 'Please select a fitness goal to continue');
       return;
-    } else if (currentStep === 5 && userResponses.prefferedWorkoutType.length === 0) {
-      Alert.alert('Selection required', 'Please select at least one workout to continue');
+    }
+    if (currentStep === 5 && userResponses.prefferedWorkoutType.length === 0) {
+      Alert.alert('Selection required', 'Please select at least one workout type to continue');
       return;
     }
-    if (showQuestionnaire === false) {
+    if (showQuestionnaire === false && !hasCompletedQuestionnaire) {
+      Alert.alert(
+        'Complete Setup Required',
+        'To provide you with best exercise, please complete the quick setup to create your personalized workout plan.',
+        [
+          {
+            text: 'Continue Setup',
+            onPress: () => {
+              setShowQuestionnaire(true);
+              setCurrentStep(1);
+            },
+          },
+        ],
+      );
+      return;
+    }
+    if (showQuestionnaire === false && hasCompletedQuestionnaire) {
       safeNavigate('LoginScreen');
       return;
     }
-    if (currentStep === 9) {
-      await saveOnBoardingData(userResponses);
-      safeNavigate('SignUpScreen');
+    if (currentStep === 8) {
+      try {
+        await saveOnBoardingData(userResponses);
+        //await saveOnBoardingDataToServer(userResponses);
+        setHasCompletedQuestionnaire(true);
+        safeNavigate('SignUpScreen');
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save your preferences. Please try again');
+        console.error('Error saving onboarding data', error);
+      }
       return;
     }
 
@@ -286,29 +392,32 @@ const OnBoardingScreen = () => {
               <Text style={styles.welcomeText}>Welcome to</Text>
               <Text style={styles.appNameText}>FitMap</Text>
               <Text style={styles.welcomeDescription}>
-                Would you like to answer a few questions to get a personalized workout plan?
+                {hasCompletedQuestionnaire
+                  ? 'Welcome back!! You can continue to login or update your preferences.'
+                  : 'To provide yoy with the best personalized workout experience, please complete our quick setup.'}
               </Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={styles.optionButton}
                   onPress={() => {
                     setShowQuestionnaire(true);
-                    {
-                      setCurrentStep(1);
-                    }
+                    setCurrentStep(1);
                   }}
                 >
-                  <Text style={styles.optionButtonText}>Yes, personalize my plan</Text>
+                  <Text style={styles.optionButtonText}>
+                    {hasCompletedQuestionnaire ? 'Update My Preferences' : "Lets's Get Started"}
+                  </Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.optionButton, styles.optionButtonSecundary]}
-                  onPress={() => {
-                    setShowQuestionnaire(false);
-                    setCurrentStep(8);
-                  }}
-                >
-                  <Text style={styles.optionButtonSecundary}>Skip for now</Text>
-                </TouchableOpacity>
+                {hasCompletedQuestionnaire && (
+                  <TouchableOpacity
+                    style={[styles.optionButton, styles.optionButtonSecundary]}
+                    onPress={() => {
+                      setShowQuestionnaire(false);
+                    }}
+                  >
+                    <Text style={styles.optionButtonSecundary}>Continue to Login</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </Animated.View>
@@ -357,7 +466,6 @@ const OnBoardingScreen = () => {
                 step={1}
                 value={userResponses.fitnessLevel}
                 onValueChange={(value) => {
-                  console.log('Slider value changed:', value);
                   updateResponse('fitnessLevel', value);
                 }}
                 minimumTrackTintColor="#6200ee"
@@ -436,6 +544,13 @@ const OnBoardingScreen = () => {
                 icon="emoji-events"
               />
             </View>
+
+            {userResponses.fitnessGoal && (
+              <TouchableOpacity style={styles.nextButton} onPress={handleNextStep}>
+                <Text style={styles.nextButtonText}>Continue</Text>
+                <MaterialIcons name="arrow-forward" size={20} color="white" />
+              </TouchableOpacity>
+            )}
           </Animated.View>
         );
       case 4:
@@ -592,18 +707,13 @@ const OnBoardingScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
-            {/* <TouchableOpacity style={[styles.nextButton, userResponses.prefferedWorkoutType === 0] ? styles.disabledButton: {}}
-                    onPress={handleNextStep} disabled={userResponses.prefferedWorkoutType.length === 0}>
-                    <Text style={styles.nextButtonText}>Finish</Text>
-                    <MaterialIcons name="check" size={20} color="white"/>
-                  </TouchableOpacity> */}
           </Animated.View>
         );
       case 7:
         return (
           <UserInfoScreen
             userResponses={userResponses}
-            updatedResponse={updateResponse}
+            updateResponse={updateResponse}
             handleNextStep={handleNextStep}
           />
         );
@@ -623,58 +733,129 @@ const OnBoardingScreen = () => {
                   Based on your preferences we've created a perosnalized AI workout plan tailored scpecifillay for you
                 </Text>
 
-                <View style={styles.planHighlight}>
-                  <View style={styles.highlightItem}>
-                    <MaterialIcons name="check-circle" size={24} color="#6200ee" />
-                    <Text style={styles.hightlightText}>{userResponses.workoutFrequency} workout per week</Text>
-                  </View>
-                  <View style={styles.hightlightItem}>
-                    <MaterialIcons name="check-circle" size={24} color="#6200ee" />
-                    <Text style={styles.hightlightText}>
-                      Focus on{' '}
-                      {userResponses.fitnessGoal === 'loseWeight'
-                        ? 'weight loss'
-                        : userResponses.fitnessGoal === 'buildMuscle'
-                        ? 'muscle build'
-                        : userResponses.fitnessGoal === 'improveCardio'
-                        ? 'cardiovascular improvement'
-                        : userResponses.fitnessGoal === 'increaseFlexibility'
-                        ? 'flexibility'
-                        : userResponses.fitnessGoal === 'athleticPerformance'
-                        ? 'athletic performance'
-                        : 'general fitness'}
-                    </Text>
+                <View style={styles.planHighlightsContainer}>
+                  <View style={styles.infoSection}>
+                    <View style={styles.sectionHeader}>
+                      <MaterialIcons name="person" size={20} color="#6200ee" />
+                      <Text style={styles.sectionTitle}>Personal Profile</Text>
+                    </View>
+                    <View style={styles.infoGrid}>
+                      <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Age</Text>
+                        <Text style={styles.infoValue}>{userResponses.age || '25'}</Text>
+                      </View>
+
+                      <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Height</Text>
+                        <Text style={styles.infoValue}>{userResponses.height || '170'} cm</Text>
+                      </View>
+
+                      <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Weight</Text>
+                        <Text style={styles.infoValue}>{userResponses.weight || 70}</Text>
+                      </View>
+
+                      <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Gender</Text>
+                        <Text style={styles.infoValue}>{userResponses.gender === 'male' ? '♂ Male' : '♀ Female'}</Text>
+                      </View>
+                    </View>
                   </View>
 
-                  <View style={styles.hightlightItem}>
-                    <MaterialIcons name="check-circle" size={24} color="#6200ee" />
-                    <Text style={styles.hightlightText}>
-                      Workouts include{' '}
-                      {userResponses.prefferedWorkoutType
-                        .slice(0, 2)
-                        .map((type) =>
-                          type === 'weightLifting'
-                            ? 'weights'
-                            : type === 'cardio'
-                            ? 'cardio'
-                            : type === 'yoga'
-                            ? 'yoga'
-                            : type === 'hiit'
-                            ? 'HIIT'
-                            : type === 'bodyweight'
-                            ? 'bodyweight'
-                            : type === 'outdoorActivities'
-                            ? 'outdoor activities'
-                            : 'sports',
-                        )
-                        .join(' & ')}
-                    </Text>
+                  <View style={styles.infoSection}>
+                    <View style={styles.sectionHeader}>
+                      <MaterialIcons name="fitness-center" size={20} color="#6200ee" />
+                      <Text style={styles.sectionTitle}>Your Fitness Plan</Text>
+                    </View>
+
+                    <View style={styles.highlightItem}>
+                      <MaterialIcons name="schedule" size={24} color="#4CAF50" />
+                      <Text style={styles.hightlightText}>
+                        {userResponses.workoutFrequency} {userResponses.workoutFrequency === 1 ? 'workout' : 'workouts'}{' '}
+                        per week
+                      </Text>
+                    </View>
+
+                    <View style={styles.hightlightItem}>
+                      <MaterialIcons name="flag" size={24} color="#FF9800" />
+                      <Text style={styles.hightlightText}>
+                        Goal:
+                        {userResponses.fitnessGoal === 'loseWeight'
+                          ? 'Lose weight'
+                          : userResponses.fitnessGoal === 'buildMuscle'
+                          ? 'Build Muscle'
+                          : userResponses.fitnessGoal === 'improveCardio'
+                          ? 'Improve Cardio'
+                          : userResponses.fitnessGoal === 'increaseFlexibility'
+                          ? 'Increase Flexibility'
+                          : userResponses.fitnessGoal === 'athleticPerformance'
+                          ? 'Athletic Performance'
+                          : 'General Fitness'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.hightlightItem}>
+                      <MaterialIcons name="trending-up" size={24} color="#FF9800" />
+                      <Text style={styles.hightlightText}>
+                        Level:
+                        {userResponses.fitnessLevel === 1
+                          ? 'Just Starting Out'
+                          : userResponses.fitnessLevel === 2
+                          ? 'Occasional Exerciser'
+                          : userResponses.fitnessGoal === 3
+                          ? 'Regular Exerciser'
+                          : userResponses.fitnessGoal === 4
+                          ? 'Fitness Enhusiast'
+                          : 'Advanced Athlete'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.hightlightItem}>
+                      <MaterialIcons name="sports" size={24} color="#2196F3" />
+                      <Text style={styles.hightlightText}>
+                        Level
+                        {userResponses.prefferedWorkoutType
+                          .map((type) => {
+                            switch (type) {
+                              case 'weightLifting':
+                                return 'Weights';
+                              case 'cardio':
+                                return 'Cardio';
+                              case 'yoga':
+                                return 'Yoga';
+                              case 'hiit':
+                                return 'HIIT';
+                              case 'bodyweight':
+                                return 'Bodyweight';
+                              case 'outdoorActivities':
+                                return 'Outdoor activities';
+                              case 'sports':
+                                return 'Sports';
+                              default:
+                                return type;
+                            }
+                          })
+                          .join(' & ')}
+                      </Text>
+                    </View>
+
+                    {userResponses.medicalConditions && (
+                      <View style={styles.highlightItem}>
+                        <MaterialIcons name="local-hospital" size={24} color="#F44336" />
+                        <Text style={styles.hightlightText}> Medical considerations noted</Text>
+                      </View>
+                    )}
                   </View>
+                </View>
+                <View style={styles.readyBadge}>
+                  <MaterialIcons name="rocket-launch" size={28} color="white" />
+                  <Text style={styles.readyText}>Ready to Transform!</Text>
                 </View>
               </View>
             </ScrollView>
           </Animated.View>
         );
+
       case 9:
         return (
           <Animated.View style={[styles.stepContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>

@@ -14,35 +14,36 @@ import ProfileScreen from '../ProfileScreen/ProfileScreen';
 import StartWorkoutScreen from '../Workout/StartWorkoutScreen';
 import WorkoutStackNavigator from '../Workout/WorkoutStackNavigator';
 import GymScreen from '../GymScreen/GymScreen';
-
+import PersonalPlanScreen from '../PersonalPlanScreen/PersonalPlanScreen';
 
 const Stack = createNativeStackNavigator();
 
 const NavigationProvider = () => {
   return (
-//    <NavigationContainer>
-    <Stack.Navigator 
-    initialRouteName='OnBoardingScreen'
-    screenOptions={{
+    //    <NavigationContainer>
+    <Stack.Navigator
+      initialRouteName="OnBoardingScreen"
+      screenOptions={{
         headerShown: false,
-    }}>
-        <Stack.Screen name="OnBoardingScreen" component={OnBoardingScreen}/>
-        <Stack.Screen name="LoginScreen" component={LoginScreen}/>
-        <Stack.Screen name="SignUpScreen" component={SignUpScreen}/>
+      }}
+    >
+      <Stack.Screen name="OnBoardingScreen" component={OnBoardingScreen} />
+      <Stack.Screen name="LoginScreen" component={LoginScreen} />
+      <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
 
+      <Stack.Screen name="ConfirmEmailScreen" component={ConfirmEmailScreen} />
+      <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
+      <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen} />
 
-        <Stack.Screen name="ConfirmEmailScreen" component={ConfirmEmailScreen}/>
-        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen}/>
-        <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen}/>
-
-        <Stack.Screen name="HomeScreen" component={HomeScreen}/>
-        <Stack.Screen name="CalendarScreen" component={CalendarScreen}/>
-        <Stack.Screen name="WorkoutScreen" component={WorkoutScreen}/>
-        <Stack.Screen name="ProfileScreen" component={ProfileScreen}/>
-        <Stack.Screen name="StartWorkoutScreen" component={StartWorkoutScreen}/>
-        <Stack.Screen name="GymScreen" component={GymScreen}/>    
+      <Stack.Screen name="HomeScreen" component={HomeScreen} />
+      <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
+      <Stack.Screen name="WorkoutScreen" component={WorkoutScreen} />
+      <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+      <Stack.Screen name="StartWorkoutScreen" component={StartWorkoutScreen} />
+      <Stack.Screen name="GymScreen" component={GymScreen} />
+      <Stack.Screen name="PersonalPlanScreen" component={PersonalPlanScreen} />
     </Stack.Navigator>
-//    </NavigationContainer>
+    //    </NavigationContainer>
   );
 };
 
