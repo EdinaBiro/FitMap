@@ -1,56 +1,50 @@
-import { StyleSheet, Text, TouchableOpacity, View,Animated,ScrollView } from 'react-native'
-import React, { useEffect,useState,useRef } from 'react';
-import {Picker} from '@react-native-picker/picker';
+import { StyleSheet, Text, TouchableOpacity, View, Animated, ScrollView } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 
+const UserInfoScreen = ({ userResponses, updateResponse, handleNextStep }) => {
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-const UserInfoScreen = ({userResponses, updateResponse, handleNextStep}) => {
-    const [activeTab, setActiveTab] = useState('age');
-    const fadeAnim = useRef(new Animated.Value(1)).current;
-    const fadeInAnim = useRef(new Animated.Value(0)).current;
+  const heightOptions = Array.from({ length: 81 }, (_, i) => ({ label: `${140 + i} cm`, value: (140 + i).toString() }));
+  const weightOptions = Array.from({ length: 121 }, (_, i) => ({ label: `${40 + i} kg`, value: (40 + i).toString() }));
+  const ageOptions = Array.from({ length: 65 }, (_, i) => ({ label: `${16 + i} years`, value: (16 + i).toString() }));
 
-    const heightOptions = Array.from({length: 81}, (_,i) => ({label: `${140+i} cm`, value: (140+i).toString()}));
-    const weightOptions = Array.from({ length: 121 }, (_, i) => ({label: `${40 + i} kg`, value:(40+i).toString()}));
-    const ageOptions = Array.from({ length: 65 }, (_, i) => ({label:`${16 + i} years`, value: (16+i).toString()}));
+  const [completed, setCompleted] = useState({
+    age: !!userResponses.age,
+    height: !!userResponses.height,
+    weight: !!userResponses.weight,
+    gender: !!userResponses.gender,
+  });
 
-    const [completed,setCompleted] = useState({
-       age: !!userResponses.age,
-       height: !!userResponses.height,
-       weight: !!userResponses.weight,
-       gender: !!userResponses.gender
-    });
+  const isComplete = () => {
+    return userResponses.age && userResponses.height && userResponses.weight && userResponses.gender;
+  };
 
-    const isComplete = () => {
-      return Object.values(completed).every(value => value);
-    };
+  useEffect(() => {
+    if (isComplete()) {
+      const timer = setTimeout(() => {
+        handleNextStep();
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [userResponses.age, userResponses.height, userResponses.weight, userResponses.gender]);
 
-    useEffect(() => {
-      if(isComplete()){
-        const timer = setTimeout(() => {
-          handleNextStep();
-        },800);
-        return () => clearTimeout(timer);
-      }
-    },[completed]);
+  const handleValueChange = (field, value) => {
+    if (typeof updateResponse === 'function') {
+      updateResponse(field, value);
+      setCompleted((prev) => ({ ...prev, [field]: true }));
+    }
+  };
 
-    const handleValueChange = (field,value) => {
-      if(typeof updateResponse === 'function'){
-         updateResponse(field,value);
-       setCompleted(prev => ({...prev, [field]: true}))
-      }else{
-        setCompleted(prev => ({...prev, [field]: true}))
-      }
-      
-    };
-
-    useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-        }).start();
-    },[]);
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
@@ -58,7 +52,7 @@ const UserInfoScreen = ({userResponses, updateResponse, handleNextStep}) => {
         source={require('../../../assets/animations/profile_animation.json')}
         autoPlay
         loop
-        style={{ width: 200, height: 200 }}
+        style={{ width: 300, height: 300 }}
       />
 
       <Text style={styles.title}>Tell me about yourself</Text>
@@ -66,72 +60,82 @@ const UserInfoScreen = ({userResponses, updateResponse, handleNextStep}) => {
 
       <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Age</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Age</Text>
+            {completed.age && (
+              <View style={styles.completedIndicator}>
+                <MaterialIcons name="check-circle" size={20} color="#4CAF50" />
+              </View>
+            )}
+          </View>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={userResponses.age || '25'}
-              onValueChange={(value) => handleValueChange('age',value)}
+              onValueChange={(value) => handleValueChange('age', value)}
               itemStyle={styles.pickerItem}
               style={styles.picker}
             >
-            {ageOptions.map((option) => (
-              <Picker.Item key={option.value} label={option.label} value={option.value}/>
-            ))}
-          </Picker>
+              {ageOptions.map((option) => (
+                <Picker.Item key={option.value} label={option.label} value={option.value} />
+              ))}
+            </Picker>
           </View>
-          {completed.age && (
-            <View style={styles.completedIndicator}>
-              <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
-            </View>
-          )}
         </View>
 
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Height</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Height</Text>
+            {completed.height && (
+              <View style={styles.completedIndicator}>
+                <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
+              </View>
+            )}
+          </View>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={userResponses.height || '170'}
               onValueChange={(value) => handleValueChange('height', value)}
-              itemStyle={styles.pickerItem}
-              style={styles.picker}>
-
+              style={styles.picker}
+            >
               {heightOptions.map((option) => (
-                <Picker.Item key={option.value} label={option.label} value={option.value}/>
+                <Picker.Item key={option.value} label={option.label} value={option.value} />
               ))}
-            
-              </Picker>
+            </Picker>
           </View>
-          {completed.height && (
-            <View style={styles.completedIndicator}>
-              <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
-            </View>
-          )}
         </View>
 
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Weight</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Weight</Text>
+            {completed.weight && (
+              <View style={styles.completedIndicator}>
+                <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
+              </View>
+            )}
+          </View>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedItem={userResponses.weight || '70'}
+              selectedValue={userResponses.weight || '70'}
               onValueChange={(value) => handleValueChange('weight', value)}
-              itemStyle={styles.pickerItem}
               style={styles.picker}
             >
               {weightOptions.map((option) => (
-                <Picker.Item key={option.value} label={option.label} value={option.value}/>
+                <Picker.Item key={option.value} label={option.label} value={option.value} />
               ))}
-              </Picker>
+            </Picker>
           </View>
-          {completed.weight && (
-            <View style={styles.completedIndicator}>
-              <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
-            </View>
-          )}
         </View>
 
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Gender</Text>
-          <View style={styles.pickerContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Gender</Text>
+            {completed.gender && (
+              <View style={styles.completedIndicator}>
+                <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
+              </View>
+            )}
+          </View>
+          <View style={styles.genderContainer}>
             <TouchableOpacity
               style={[styles.genderOption, userResponses.gender === 'female' && styles.selectedGender]}
               onPress={() => handleValueChange('gender', 'female')}
@@ -166,7 +170,7 @@ const UserInfoScreen = ({userResponses, updateResponse, handleNextStep}) => {
       </View>
     </Animated.View>
   );
-}
+};
 
 export default UserInfoScreen;
 
@@ -174,8 +178,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 10,
   },
   title: {
@@ -190,24 +193,37 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginBottom: 20,
+    paddingHorizontal: 10,
+    lineHeight: 20,
   },
-  formContainer:{
+  formContainer: {
+    flex: 1,
     width: '100%',
-    maxHeight: 400,
   },
-  inputSection:{
-    width: '100%',
-    maxHeight: 400,
+  inputSection: {
+    marginBottom: 24,
   },
-  sectionTitle:{
-    fontSize: 18,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#444',
-    marginBottom: 8,
+  },
+  completedIndicator: {
+    backgroundColor: '#E8F5E8',
+    padding: 4,
+    borderRadius: 12,
   },
   pickerContainer: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: 'white',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -217,17 +233,17 @@ const styles = StyleSheet.create({
   },
   picker: {
     width: '100%',
-    height: 120,
+    height: 60,
   },
   genderContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    width: '100%',
-    padding: 10,
+    gap: 15,
   },
   genderOption: {
+    flex: 1,
     alignItems: 'center',
-    padding: 15,
+    padding: 16,
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#6200ee',
@@ -246,6 +262,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   progressIndicator: {
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 30,
@@ -268,7 +285,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#B39DDB',
     elevation: 0,
   },
-  progressContainer:{
+  progressContainer: {
     width: '100%',
     alignItems: 'center',
     marginBottom: 8,
@@ -280,12 +297,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     marginHorizontal: 5,
   },
-  completedDot:{
+  completedDot: {
     backgroundColor: '#4CAF50',
   },
   progressText: {
     fontSize: 14,
-    color:'#666',
-    textAlign: 'center'
-  }
+    color: '#666',
+    textAlign: 'center',
+  },
 });

@@ -17,6 +17,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { baseURL } from '../../utils';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -254,7 +255,12 @@ const ProfileScreen = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <LottieView
+          source={require('../../../assets/animations/loading_animation.json')}
+          autoPlay
+          loop
+          style={{ width: 150, height: 150 }}
+        />
         <Text style={styles.loadingText}>Loading your profile...</Text>
       </View>
     );
