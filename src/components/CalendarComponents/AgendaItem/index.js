@@ -7,8 +7,6 @@ import Emoji from 'react-native-emoji';
 
 const AgendaItem = React.memo(({ item, selectedDate, navigation, renderRightActions }) => {
   const swipeableRef = useRef(null);
-
-  // Create a stable reference to the item
   const currentItemRef = useRef(item);
   currentItemRef.current = item;
 
