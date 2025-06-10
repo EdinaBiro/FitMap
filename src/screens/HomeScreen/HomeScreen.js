@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, FlatList, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -128,6 +128,72 @@ const HomeScreen = () => {
     </View>
   );
 
+  const renderHeader = () => (
+    <>
+      <View style={styles.mapCard}>
+        <Text style={styles.mapCardTitle}>Current Position</Text>
+        <MapView style={styles.map} initialRegion={mapRegion} showsUserLocation={true} showsMyLocationButton={true}>
+          {userLocation && <Marker coordinate={userLocation} title="Your location" pinColor="#6200ee" />}
+        </MapView>
+
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() =>
+              getUserLocation().then((location) => {
+                if (location) {
+                  setMapRegion({
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    latitudeDelta: 0.0922,
+                    longitudeDelta: 0.0421,
+                  });
+                }
+              })
+            }
+          >
+            <Text style={styles.actionButtonText}>📍 Refresh</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() =>
+              navigation.navigate('WorkoutStackNavigator', {
+                screen: 'StartWorkoutScreen',
+                params: {
+                  workoutName: 'Free Run',
+                  initialLocation: { latitude: mapRegion.latitude, longitude: mapRegion.longitude },
+                },
+              })
+            }
+          >
+            <Text style={styles.actionButtonText}>🏃‍♂️ Workout</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('CalendarScreen', { location: userLocation })}
+          >
+            <Text style={styles.actionButtonText}>📅 Calendar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.routesSectionHeader}>
+        <Text style={styles.routesSectionTitle}>Recommended Routes</Text>
+        <TouchableOpacity style={styles.generateButton} onPress={() => generateRandomRoutes(userLocation)}>
+          <Text style={styles.generateButtonText}>🔄 New Routes</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.noRoutesContainer}>
+      <Text style={styles.noRoutesText}>Press the "New Routes" button to generate running routes!</Text>
+    </View>
+  );
+
   useEffect(() => {
     getUserLocation();
 
@@ -153,93 +219,34 @@ const HomeScreen = () => {
     };
   }, []);
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6200ee" />
+        <Text style={styles.loadingText}>Loading location...</Text>
+      </View>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{errorMsg}</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6200ee" />
-          <Text style={styles.loadingText}>Loading location...</Text>
-        </View>
-      ) : errorMsg ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        </View>
-      ) : (
-        <>
-          <View style={styles.mapCard}>
-            <Text style={styles.mapCardTitle}>Current Position</Text>
-            <MapView style={styles.map} initialRegion={mapRegion} showsUserLocation={true} showsMyLocationButton={true}>
-              {userLocation && <Marker coordinate={userLocation} title="Your location" pinColor="#6200ee" />}
-            </MapView>
-
-            <View style={styles.quickActions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() =>
-                  getUserLocation().then((location) => {
-                    if (location) {
-                      setMapRegion({
-                        latitude: location.latitude,
-                        longitude: location.longitude,
-                        latitudeDelta: 0.0922,
-                        longitudeDelta: 0.0421,
-                      });
-                    }
-                  })
-                }
-              >
-                <Text style={styles.actionButtonText}>📍 Refresh</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() =>
-                  navigation.navigate('WorkoutStackNavigator', {
-                    screen: 'StartWorkoutScreen',
-                    params: {
-                      workoutName: 'Free Run',
-                      initialLocation: { latitude: mapRegion.latitude, longitude: mapRegion.longitude },
-                    },
-                  })
-                }
-              >
-                <Text style={styles.actionButtonText}>🏃‍♂️ Workout</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('CalendarScreen', { location: userLocation })}
-              >
-                <Text style={styles.actionButtonText}>📅 Calendar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.routesSection}>
-            <View style={styles.routesSectionHeader}>
-              <Text style={styles.routesSectionTitle}>Recommended Routes</Text>
-              <TouchableOpacity style={styles.generateButton} onPress={() => generateRandomRoutes(userLocation)}>
-                <Text style={styles.generateButtonText}>🔄 New Routes</Text>
-              </TouchableOpacity>
-            </View>
-
-            {routes.length === 0 ? (
-              <View style={styles.noRoutesContainer}>
-                <Text style={styles.noRoutesText}>Press the "New Routes" button to generate running routes!</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={routes}
-                renderItem={renderRouteCard}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.routesList}
-              />
-            )}
-          </View>
-        </>
-      )}
-    </ScrollView>
+    <FlatList
+      style={styles.container}
+      data={routes}
+      renderItem={renderRouteCard}
+      keyExtractor={(item) => item.id}
+      ListHeaderComponent={renderHeader}
+      ListEmptyComponent={renderEmptyState}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.flatListContent}
+    />
   );
 };
 
@@ -247,6 +254,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  flatListContent: {
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -272,10 +282,14 @@ const styles = StyleSheet.create({
   },
 
   mapCard: {
-    margin: 15,
+    margin: 0,
+    marginBottom: 15,
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: 0,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    padding: 20,
+    paddingTop: 15,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -285,19 +299,19 @@ const styles = StyleSheet.create({
   mapCardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 15,
     color: '#333',
   },
   map: {
     width: '100%',
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 10,
+    height: 400,
+    borderRadius: 15,
+    marginBottom: 15,
   },
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 15,
+    marginTop: 10,
   },
   actionButton: {
     backgroundColor: '#6200ee',
@@ -314,15 +328,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  routesSection: {
-    margin: 15,
-    marginTop: 0,
-  },
   routesSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
+    marginHorizontal: 15,
   },
   routesSectionTitle: {
     fontSize: 20,
@@ -342,6 +353,7 @@ const styles = StyleSheet.create({
   },
   noRoutesContainer: {
     backgroundColor: 'white',
+    margin: 15,
     padding: 30,
     borderRadius: 15,
     alignItems: 'center',
@@ -353,14 +365,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  routesList: {
-    paddingBottom: 20,
-  },
 
   routeCard: {
     backgroundColor: 'white',
     borderRadius: 15,
     marginBottom: 15,
+    marginHorizontal: 15,
     padding: 15,
     elevation: 3,
     shadowColor: '#000',
