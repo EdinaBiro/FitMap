@@ -12,7 +12,7 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Geolocation from 'react-native-geolocation-service';
-import MapView, { Polyline } from 'react-native-maps';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import { PROVIDER_GOOGLE } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
 import Modal from 'react-native-modal';
@@ -41,6 +41,20 @@ const StartWorkoutScreen = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const formattedDate = format(new Date(), 'yyyy-MM-dd');
   const currentUserId = auth().currentUser?.uid;
+  const routeData = route.params?.routeData;
+
+  const [currentWaypointIndex, setcurrentWaypointIndex] = useState(0);
+  const [distanceToNextWayPoint, setDistanceToNextWayPoint] = useState(0);
+  const [isFollowingRoute, setIsFollowingRoute] = useState(!!routeData);
+  const [routeCompletion, setRouteCompletion] = useState(0);
+  const [isOffRoute, setIsOffRoute] = useState(false);
+
+  const getRouteWayPoints = () => {
+    if (!routeData) return [];
+    return routeData.coordinates || [routeData.startCoords, routeData.midCoords, routeData.endCoords];
+  };
+
+  const routeWayPoints = getRouteWayPoints();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -90,6 +104,12 @@ const StartWorkoutScreen = () => {
     }
     return () => clearInterval(interval);
   }, [isWorkoutActive, isPaused]);
+
+  useEffect(() => {
+    if (location && isFollowingRoute && routeWayPoints.length > 0) {
+      updateRouteProgress(location);
+    }
+  }, [location, isFollowingRoute, currentWaypointIndex]);
 
   const animateCountdown = () => {
     fadeAnim.setValue(0);
@@ -168,12 +188,83 @@ const StartWorkoutScreen = () => {
     );
   };
 
+  const updateRouteProgress = (currentLocation) => {
+    if (!routeWayPoints.length) return;
+
+    const currentWayPoint = routeWayPoints[currentWaypointIndex];
+    if (!currentWayPoint) return;
+
+    const distanceToWaypoint = calculateDistance(currentLocation, currentWayPoint);
+    setDistanceToNextWayPoint(distanceToWaypoint);
+
+    if (distanceToWaypoint < 0.05) {
+      if (currentWaypointIndex < routeWayPoints.length - 1) {
+        setcurrentWaypointIndex(currentWaypointIndex + 1);
+        Alert.alert('Waypoint Reached!', 'Great job! Continue to the next waypoint');
+      } else {
+        setRouteCompletion(100);
+        Alert.alert('Route Completed!', "Congratulations! You've completed the route.");
+      }
+    }
+    const distanceFromRoute = getDistanceFromRouteLine(currentLocation);
+    setIsOffRoute(distanceFromRoute > 0.1);
+
+    const totalWaypoints = routeWayPoints.length;
+    const completedWaypoints = currentWaypointIndex;
+    const progressPercentage = Math.min((completedWaypoints / (totalWaypoints - 1)) * 100, 100);
+    setRouteCompletion(progressPercentage);
+  };
+
+  const getDistanceFromRouteLine = (currentLocation) => {
+    if (!routeWayPoints.length) return 0;
+
+    let minDistance = Infinity;
+    for (let i = 0; i < routeWayPoints.length - 1; i++) {
+      const segmentStart = routeWayPoints[i];
+      const segmentEnd = routeWayPoints[i + 1];
+      const distanceToSegment = getDistanceToLineSegment(currentLocation, segmentStart, segmentEnd);
+      minDistance = Math.min(minDistance, distanceToSegment);
+    }
+
+    return minDistance;
+  };
+
+  const getDistanceToLineSegment = (point, lineStart, lineEnd) => {
+    const A = point.latitude - lineStart.latitude;
+    const B = point.longitude - lineStart.longitude;
+    const C = lineEnd.latitude - lineStart.latitude;
+    const D = lineEnd.longitude - lineStart.longitude;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    if (lenSq !== 0) {
+      param = dot / lenSq;
+    }
+
+    let xx, yy;
+    if (param < 0) {
+      xx = lineStart.latitude;
+      yy = lineStart.longitude;
+    } else if (param > 1) {
+      xx = lineEnd.latitude;
+      yy = lineEnd.longitude;
+    } else {
+      xx = lineStart.latitude + param * C;
+      yy = lineStart.longitude + param * D;
+    }
+
+    return calculateDistance(point, { latitude: xx, longitude: yy });
+  };
+
   const calculateDistance = (startCoords, endCoords) => {
     if (
       !startCoords ||
       !endCoords ||
-      (!startCoords.latitude && !startCoords.longitude && !endCoords.latitude) ||
-      !endCoords.longitude
+      startCoords.latitude === undefined ||
+      startCoords.longitude === undefined ||
+      endCoords.latitude === undefined ||
+      endCoords.longitude === undefined
     ) {
       return 0;
     }
@@ -215,16 +306,16 @@ const StartWorkoutScreen = () => {
     const userGender = gender;
     const userHeight = height;
 
-    let bmr; //Basal Metabolic Rate ----> Mifflin-St Jeor Equation
+    let bmr;
     if (userGender.toLowerCase() === 'male') {
       bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge + 5;
     } else {
       bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge - 161;
     }
 
-    const caloriesPerMinRest = bmr / 1440; //calories burned per minute during rest
+    const caloriesPerMinRest = bmr / 1440;
 
-    let met; //Metabolic Equivalent of Task   ---> based on workout intenstisy
+    let met;
 
     const paceMinPerKm = duration / 60 / distance;
 
@@ -307,6 +398,44 @@ const StartWorkoutScreen = () => {
     return distance < 0.1;
   };
 
+  const getMapRegion = () => {
+    if (location) {
+      return {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+    }
+    return {
+      latitude: 37.78825,
+      longitude: -122.4324,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+  };
+
+  const renderRouteInfo = () => {
+    if (!isFollowingRoute || !routeData) return null;
+
+    return (
+      <View style={styles.routeInfoContainer}>
+        <Text style={styles.routeInfoTitle}>🗺️ Route Progress</Text>
+        <View style={styles.routeInfoRow}>
+          <Text style={styles.routeInfoText}>
+            📍 Waypoint: {currentWaypointIndex + 1}/{routeWayPoints.length}
+          </Text>
+          <Text style={styles.routeInfoText}>🎯 Distance to next: {(distanceToNextWayPoint * 1000).toFixed(0)}m</Text>
+        </View>
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: `${routeCompletion}%` }]} />
+        </View>
+        <Text style={styles.progressText}>{routeCompletion.toFixed(0)}% Complete</Text>
+        {isOffRoute && <Text style={styles.offRouteText}>⚠️ You're off the planned route!</Text>}
+      </View>
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
       {countDown > 0 ? (
@@ -329,7 +458,22 @@ const StartWorkoutScreen = () => {
               followsUserLocation={true}
             >
               <Polyline coordinates={locationHistory} strokeColor="#6200ee" strokeWidth={3} />
+
+              {isFollowingRoute && routeWayPoints.length > 0 && (
+                <Polyline coordinates={routeWayPoints} strokeColor="#FF6B35" strokeWidth={2} lineDashPattern={[5, 5]} />
+              )}
+
+              {isFollowingRoute &&
+                routeWayPoints.map((waypoint, index) => (
+                  <Marker
+                    key={index}
+                    coordinate={waypoint}
+                    title={`Waypoint ${index + 1}`}
+                    pinColor={index === 0 ? 'green' : index === routeWayPoints.length - 1 ? 'red' : 'orange'}
+                  />
+                ))}
             </MapView>
+
             <View style={styles.infoContainer}>
               <Text style={styles.workoutText}>🏋️‍♂️ Workout Started: {workoutName}</Text>
               <View style={styles.detailRow}>
@@ -338,6 +482,8 @@ const StartWorkoutScreen = () => {
                 <Text style={styles.detailsText}>⏱ Pace : {pace} min/km</Text>
                 <Text style={styles.detailsText}>🔥Calories : {calories} kcal</Text>
               </View>
+
+              {renderRouteInfo()}
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.button} onPress={handlePause}>

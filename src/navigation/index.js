@@ -32,8 +32,10 @@ const Navigation = () => {
       <Stack.Screen name="StartWorkoutScreen" component={StartWorkoutScreen} />
       <Stack.Screen name="WorkoutStackNavigator" component={WorkoutStackNavigator} />
       <Stack.Screen name="GymScreen" component={GymScreen} />
+      {/* <Stack.Screen name="HomeScreen" component={HomeScreen} />
+      <Stack.Screen name="StartWorkoutScreen" component={StartWorkoutScreen} /> */}
       {/* <Stack.Screen name="PersonalPlanScreen" component={PersonalPlanScreen} /> */}
-      {/* <Stack.Screen name="MainApp" component={DrawerNavigation} /> */}
+      <Stack.Screen name="MainApp" component={DrawerNavigation} />
     </Stack.Navigator>
   );
 };
