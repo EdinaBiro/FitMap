@@ -6,6 +6,8 @@ import CustomDrawerContent from './CustomDrawerContent';
 import GymScreen from '../screens/GymScreen/GymScreen';
 import WorkoutDetailsScreen from '../screens/Workout/WorkoutDetailsScreen';
 import PersonalPlanScreen from '../screens/PersonalPlanScreen/PersonalPlanScreen';
+import HomeScreen from '../screens/HomeScreen/HomeScreen';
+import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
 
 const Drawer = createDrawerNavigator();
 
@@ -16,20 +18,6 @@ const CustomHeader = ({ navigation }) => (
     </TouchableOpacity>
   </View>
 );
-
-// const MainStack = () => (
-//     <Stack.Navigator>
-//         <Stack.Screen
-//             name="MainStack"
-//             component={BottomNavigation}
-//             options={({navigation}) => ({
-//                 headerLeft: () => <CustomHeader navigation={navigation} />,
-//                 headerShown: true,
-//                 title: '',
-//             })} />
-
-//     </Stack.Navigator>
-// );
 
 const DrawerNavigation = () => {
   return (
@@ -67,6 +55,12 @@ const DrawerNavigation = () => {
       <Drawer.Screen
         name="WorkoutDetailsScreen"
         component={WorkoutDetailsScreen}
+        options={{ title: '', drawerItemStyle: { display: 'none' } }}
+      ></Drawer.Screen>
+
+      <Drawer.Screen
+        name="WorkoutStackNavigator"
+        component={WorkoutStackNavigator}
         options={{ title: '', drawerItemStyle: { display: 'none' } }}
       ></Drawer.Screen>
     </Drawer.Navigator>

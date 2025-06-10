@@ -8,9 +8,19 @@ from PIL import Image
 import os
 import requests
 import json
+import tempfile
+from werkzeug.utils import secure_filename
 
 
 app = Flask(__name__)
+
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+UPLOAD_FOLDER = 'temp_uploads'
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(
@@ -24,6 +34,9 @@ pose = mp_pose.Pose(
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
 def calculate_angle(a,b,c):
     a = np.array(a)
@@ -114,34 +127,54 @@ def extract_keypoints(landmarks):
     }
 
 def detect_exercise_type(landmarks):
-    left_shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
-    right_shoulder = [landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
-    left_elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x, landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
-    right_elbow = [landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
-    left_wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x, landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y]
-    right_wrist = [landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].y]
-    left_hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x, landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y]
-    right_hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y]
-    left_knee = [landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x, landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y]
-    right_knee = [landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y]
-    left_ankle = [landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x, landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y]
-    right_ankle = [landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x, landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y]
+    def get_coords(landmark_name):
+        lm = landmarks[mp_pose.PoseLandmark[landmark_name].value]
+        return [lm.x, lm.y]
 
-    knee_angle = calculate_angle(left_hip,left_knee, left_ankle)
-    left_elbow_angle= calculate_angle(right_shoulder, right_elbow, right_wrist)
-    right_elbow_angle= calculate_angle(left_shoulder, left_elbow, left_wrist)
+    # Get key joint coordinates
+    left_shoulder = get_coords('LEFT_SHOULDER')
+    right_shoulder = get_coords('RIGHT_SHOULDER')
+    left_elbow = get_coords('LEFT_ELBOW')
+    right_elbow = get_coords('RIGHT_ELBOW')
+    left_wrist = get_coords('LEFT_WRIST')
+    right_wrist = get_coords('RIGHT_WRIST')
+    left_hip = get_coords('LEFT_HIP')
+    right_hip = get_coords('RIGHT_HIP')
+    left_knee = get_coords('LEFT_KNEE')
+    right_knee = get_coords('RIGHT_KNEE')
+    left_ankle = get_coords('LEFT_ANKLE')
+    right_ankle = get_coords('RIGHT_ANKLE')
 
-    left_curl_postion = (left_wrist[1] < left_elbow[1]) and (left_elbow_angle < 140)
-    right_curl_postion = (right_wrist[1] < right_elbow[1]) and (right_elbow_angle < 140)
+    # Calculate angles
+    left_elbow_angle = calculate_angle(left_shoulder, left_elbow, left_wrist)
+    right_elbow_angle = calculate_angle(right_shoulder, right_elbow, right_wrist)
+    left_knee_angle = calculate_angle(left_hip, left_knee, left_ankle)
+    right_knee_angle = calculate_angle(right_hip, right_knee, right_ankle)
 
-    if left_curl_postion or right_curl_postion:
+    # Heuristics
+    is_left_curl = left_elbow_angle < 60 and left_wrist[1] < left_elbow[1] < left_shoulder[1]
+    is_right_curl = right_elbow_angle < 60 and right_wrist[1] < right_elbow[1] < right_shoulder[1]
+
+    is_squat = (
+        left_knee_angle < 100 and right_knee_angle < 100 and
+        left_knee[1] > left_hip[1] and right_knee[1] > right_hip[1]
+    )
+
+    is_pushup = (
+        left_elbow_angle < 100 and right_elbow_angle < 100 and
+        left_shoulder[1] < left_elbow[1] < left_wrist[1]
+    )
+
+    # Decision tree
+    if is_left_curl or is_right_curl:
         return "bicep_curl"
-    elif knee_angle < 120 and left_knee[1] < left_hip[1]:
+    elif is_squat:
         return "squat"
-    elif left_elbow_angle < 90 and left_elbow[1] > left_shoulder[1]:
+    elif is_pushup:
         return "pushup"
     else:
         return "unknown"
+
     
 def prepare_landmark_data_for_deepseek(landmarks):
     landmark_data = []
@@ -158,8 +191,8 @@ def prepare_landmark_data_for_deepseek(landmarks):
     return landmark_data
 
 
-def get_pose_landmarks(image):
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+def extract_pose_landmarks(frame):
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = pose.process(image_rgb)
 
     if not results.pose_landmarks:
@@ -175,86 +208,362 @@ def get_pose_landmarks(image):
 
     return landmarks
 
-def query_deepseek(landmark_data, exercise_type):
-
-    if not DEEPSEEK_API_KEY:
-        print("Warning: api key not se")
+def analyze_rep_movement(landmarks_sequence, exercise_type):
+    if not landmarks_sequence or len(landmarks_sequence) < 5:
         return {
-            "success" : False,
-            "message" : "Api key not configured"
+            'reps': 0,
+            'correct_reps': 0,
+            'incorrect_reps': 0,
+            'feedback': [],
+            'stages': []
         }
-    
-    simplified_data = []
-    key_points= ["NOSE", "LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW", "RIGHT_ELBOW",
-                 "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HIP", "RIGHT_HIP",
-                 "LEFT_KNEE", "RIGHT_KNEE", "LEFT_ANKLE", "RIGHT_ANKLE"
-                 ]
-    
-    for point in landmark_data:
-        if point["name"] in key_points:
-            simplified_data.append({
-                "name": point["name"],
-                "position" : [point["x"], point["y"]],
-                "visbility": point["visibility"]
-            })
-    prompt = f"""
-    You are an expert fitness trainer analyzing form. Based on the following skeletal position data, provide feedback on the user's {exercise_type} form:
 
-    {json.dumps(simplified_data, indent=2)}
-    Provide your analysis in this exact JSON format: 
-    ({
-        "feedback" : "Short, specific feedback about form issues",
-        "correct" : true/false,
-        "issues" : ["specific issue 1", "specific issue 2"],
-        "stage" : "up/down/halfway",
-        "improvement_tips":"Brief tip to improve form"
-    })
+    reps = 0
+    correct_reps = 0
+    incorrect_reps = 0
+    stages = []
+    feedback_log = []
+    current_stage = None
+    in_rep = False
+    min_angle = 180
+    max_angle = 0
 
-    ONLY respond with valid JSON following the above structure. No addtitional text.
-  
-    """
+    for i, landmarks_dict in enumerate(landmarks_sequence):
+        class MockLandmark:
+            def __init__(self, x, y, z, visibility):
+                self.x = x
+                self.y = y
+                self.z = z
+                self.visibility = visibility
 
-    headers ={
-        "Authorization" : f"Berarer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
+        landmarks = [MockLandmark(l['x'], l['y'], l['z'], l['visibility']) for l in landmarks_dict]
+
+        if exercise_type == "bicep_curl":
+            # Get both arms for more robust analysis
+            left_shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,
+                           landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+            left_elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x,
+                         landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
+            left_wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x,
+                         landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y]
+            
+            right_shoulder = [landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,
+                            landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
+            right_elbow = [landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].x,
+                          landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
+            right_wrist = [landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].x,
+                          landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].y]
+
+            # Calculate angles for both arms
+            left_angle = calculate_angle(left_shoulder, left_elbow, left_wrist)
+            right_angle = calculate_angle(right_shoulder, right_elbow, right_wrist)
+            
+            # Use the arm with more movement (likely the one doing the curl)
+            if abs(left_angle - right_angle) > 30:
+                angle = min(left_angle, right_angle)  # The more bent arm
+            else:
+                angle = (left_angle + right_angle) / 2  # Average if both similar
+            
+            # Track min and max angles in current rep
+            if in_rep:
+                min_angle = min(min_angle, angle)
+                max_angle = max(max_angle, angle)
+            
+            # Determine stage
+            if angle > 150:
+                stage = "down"
+            elif angle < 40:
+                stage = "up"
+            else:
+                stage = "transition"
+            
+            stages.append(stage)
+            
+            # Rep counting logic
+            if not in_rep and stage == "up":
+                in_rep = True  # Start of a rep
+                min_angle = angle
+                max_angle = angle
+            elif in_rep and stage == "down" and max_angle - min_angle > 80:  # Minimum range of motion
+                reps += 1
+                in_rep = False
+                
+                # Check form at the top of the rep
+                feedback, correct = check_posture(landmarks)
+                feedback_log.append(feedback)
+                
+                if correct:
+                    correct_reps += 1
+                else:
+                    incorrect_reps += 1
+            
+            current_stage = stage
+
+    return {
+        'reps': reps,
+        'correct_reps': correct_reps,
+        'incorrect_reps': incorrect_reps,
+        'feedback': feedback_log,
+        'stages': stages
     }
 
-    playload = {
-        "model" : "deepseek-chat",
-        "messages" : [
-            {"role": "user", "content" : prompt}
-        ], 
+
+def summarize_pose_data(landmarks_sequence, exercise_type):
+    if not landmarks_sequence:
+        return "No pose data available"
+    
+    key_points = ["LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW", "RIGHT_ELBOW", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HIP", "RIGHT_HIP", "LEFT_KNEE", "RIGHT_KNEE"]
+
+    summary = {
+        "exercise_type": exercise_type,
+        "total_frames": len(landmarks_sequence),
+        "key_observations": []
+    }
+
+    frames_to_analyze = [0, len(landmarks_sequence)//2, -1]
+
+    for i, frame_idx in enumerate(frames_to_analyze):
+        if frame_idx < len(landmarks_sequence):
+            landmarks = landmarks_sequence[frame_idx]
+            frame_name = ["start", "middle", "end"][i]
+
+            if exercise_type == "bicep_curl":
+                left_shoulder = landmarks[11]
+                left_elbow = landmarks[13]
+                left_wrist = landmarks[15]
+
+                angle = calculate_angle(
+                    [left_shoulder['x'], left_shoulder['y']],
+                    [left_elbow['x'], left_elbow['y']],
+                    [left_wrist['x'], left_wrist['y']]
+                )
+
+                summary["key_observations"].append(f"{frame_name}_elbow_angle: {angle: 1.f}°")
+    return json.dumps(summary, indent=2)
+
+# def generate_ai_feedback(exercise_type,landmarks_sequence,rep_analysis):
+
+#     if not DEEPSEEK_API_KEY:
+#         print("Warning: api key not se")
+#         return {
+#             "success" : False,
+#             "message" : "Api key not configured"
+#         }
+    
+#     pose_summary = summarize_pose_data(landmarks_sequence, exercise_type)
+#     prompt = f"""
+#     You are an expert fitness trainer analyzing form. The user performed '{exercise_type}'
+
+#     Analysis Results:
+#     - Total Reps: {rep_analysis['reps']}
+#     - Correct Form Reps: {rep_analysis['correct_reps']}
+#     - Poor Form Reps: {rep_analysis['incorrect_reps']}
+    
+#     Pose Data Summary:
+#     {pose_summary}
+    
+#     Provide constructive feedback in this exact JSON format:
+#     {{
+#         "feedback": "Overall assessment of the exercise performance",
+#         "correct": true/false,
+#         "issues": ["specific issue 1", "specific issue 2"],
+#         "improvement_tips": "Specific tips to improve form and technique",
+#         "positive_points": "What the user did well"
+#     }}
+    
+#     ONLY respond with valid JSON following the above structure. No additional text.
+#     """
+    
+#     headers = {
+#         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+#         "Content-Type": "application/json"
+#     }
+    
+#     payload = {
+#         "model": "deepseek-chat",
+#         "messages": [
+#             {"role": "user", "content": prompt}
+#         ],
+#         "temperature": 0.7,
+#         "response_format": {"type": "json_object"}
+#     }
+    
+#     try:
+#         response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers, timeout=30)
+#         if response.status_code == 200:
+#             content = response.json()
+#             if "choices" in content and len(content["choices"]) > 0:
+#                 feedback_text = content["choices"][0]["message"]["content"]
+#                 feedback_json = json.loads(feedback_text)
+#                 return {
+#                     "success": True,
+#                     **feedback_json
+#                 }
+#         return {
+#             "success": False,
+#             "message": f"API Error: {response.status_code}",
+#             "details": response.text
+#         }
+#     except Exception as e:
+#         return {
+#             "success": False,
+#             "message": f"Error: {str(e)}"
+#         }
+
+def generate_ai_feedback(exercise_type, landmarks_sequence, rep_analysis):
+    """Generate friendly fitness feedback using AI with emojis and natural language"""
+    
+    if not DEEPSEEK_API_KEY:
+        print("⚠️ Warning: API key not set - cannot provide AI feedback")
+        return {
+            "success": False,
+            "message": "Our fitness coach is unavailable right now 🏋️‍♂️"
+        }
+    
+    # Create a simple summary of the workout
+    pose_summary = summarize_pose_data(landmarks_sequence, exercise_type)
+    
+    prompt = f"""
+    🏋️‍♀️ You're a world-class fitness coach analyzing a {exercise_type} workout. 
+    The user completed:
+    - Total reps: {rep_analysis['reps']} 💪
+    - Good form reps: {rep_analysis['correct_reps']} ✅
+    - Needs improvement reps: {rep_analysis['incorrect_reps']} ❌
+
+    Technical analysis:
+    {pose_summary}
+
+    Provide warm, encouraging feedback in this EXACT format (ONLY JSON):
+    {{
+        "overall": "Brief motivational summary with 1-2 emojis",
+        "score": "X/10 rating",
+        "whats_good": [
+            "Specific things they did well with emojis",
+            "Another positive point"
+        ],
+        "to_improve": [
+            "Specific form issue with simple fix",
+            "Another area for improvement"
+        ],
+        "pro_tip": "One actionable tip to implement next time",
+        "encouragement": "Final motivational note with emoji"
+    }}
+
+    Rules:
+    1. Keep it positive and constructive 🌟
+    2. Use simple language and 1-2 emojis per section
+    3. Never discourage - always motivate!
+    4. ONLY respond with valid JSON
+    """
+    
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "response_format" : {"type": "json_object"}
+        "response_format": {"type": "json_object"}
     }
     
     try:
-        response = requests.post(DEEPSEEK_API_URL, json=playload, headers=headers)
+        print("🔍 Analyzing your workout with our AI coach...")
+        response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers, timeout=30)
+        
         if response.status_code == 200:
             content = response.json()
-            if "choices" in content and len(content["choices"]) > 0:
-                feedback_text = content["choices"][0]["message"]["content"]
-                feedback_json = json.loads(feedback_text)
-                return{
-                    "success" : True,
-                    "feedback" : feedback_json["feedback"],
-                    "correct" : feedback_json["correct"],
-                    "issues" : feedback_json["issues"],
-                    "stage" : feedback_json["stage"],
-                    "improvement_tips": feedback_json["improvement_tips"]
+            if "choices" in content and content["choices"]:
+                feedback = json.loads(content["choices"][0]["message"]["content"])
+                return {
+                    "success": True,
+                    "coach_feedback": {
+                        "summary": f"🏆 {feedback.get('overall', 'Nice workout!')}",
+                        "score": feedback.get("score", "8/10"),
+                        "strengths": feedback.get("whats_good", []),
+                        "improvements": feedback.get("to_improve", []),
+                        "tip": f"💡 Pro Tip: {feedback.get('pro_tip', 'Keep consistent form')}",
+                        "motivation": f"✨ {feedback.get('encouragement', 'You got this!')}"
+                    }
                 }
+        
         return {
             "success": False,
-            "message": f"API Error : {response.status_code}",
-            "details" : response.text
+            "message": "😅 Our coach is busy right now - try again later!"
         }
+        
     except Exception as e:
-        return{
-            "success" : False,
-            "message": f"Error: {str(e)}"
-,
+        print(f"⚠️ Error talking to AI coach: {str(e)}")
+        return {
+            "success": False,
+            "message": "🚧 Technical difficulty - your human coach will help instead!"
         }
 
+def process_video_with_mediapipe(video_path, exercise_type):
+    """Process video with MediaPipe and analyze exercise"""
+    cap = cv2.VideoCapture(video_path)
+    all_landmarks = []
+    frame_count = 0
+    
+    print(f"Processing video: {video_path}")
+    print(f"Exercise type: {exercise_type}")
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        frame_count += 1
+    
+        if frame_count % 3 == 0:
+            landmarks = extract_pose_landmarks(frame)
+            if landmarks:
+                all_landmarks.append(landmarks)
+    
+    cap.release()
+    
+    print(f"Processed {frame_count} frames, extracted {len(all_landmarks)} landmark sets")
+    
+    if not all_landmarks:
+        return {
+            "success": False,
+            "message": "No pose detected in video",
+            "total_reps": 0,
+            "correct_reps": 0,
+            "incorrect_reps": 0
+        }
+    
+    rep_analysis = analyze_rep_movement(all_landmarks, exercise_type)
+
+    ai_feedback = generate_ai_feedback(exercise_type, all_landmarks, rep_analysis)
+    
+    result = {
+        "success": True,
+        "exercise_type": exercise_type,
+        "total_reps": rep_analysis['reps'],
+        "correct_reps": rep_analysis['correct_reps'],
+        "incorrect_reps": rep_analysis['incorrect_reps'],
+        "total_frames_analyzed": len(all_landmarks)
+    }
+    
+    if ai_feedback["success"]:
+        result.update({
+            "feedback": ai_feedback.get("feedback", "Good job!"),
+            "issues": ai_feedback.get("issues", []),
+            "improvement_tips": ai_feedback.get("improvement_tips", "Keep up the good work!"),
+            "positive_points": ai_feedback.get("positive_points", "Great effort!"),
+            "using_ai": True
+        })
+    else:
+        result.update({
+            "feedback": f"Completed {rep_analysis['reps']} reps with {rep_analysis['correct_reps']} good form",
+            "issues": [],
+            "improvement_tips": "Focus on maintaining proper form throughout the movement",
+            "using_ai": False
+        })
+    
+    return result
 
 @app.route('/analyze_pose', methods=['POST'])
 def analyze_pose():
@@ -275,8 +584,8 @@ def analyze_pose():
             img_rgb = img_np
         else:
             return jsonify({
-                'detected' : False,
-                'message' : 'Unsupported image format'
+                'detected': False,
+                'message': 'Unsupported image format'
             })
             
         results = pose.process(img_rgb)
@@ -286,24 +595,8 @@ def analyze_pose():
                 'detected': False,
                 'message': 'No pose detected'
             })
+
         landmarks = results.pose_landmarks.landmark
-
-        key_landmarks = [
-            mp_pose.PoseMark.LEFT_SHOULDER.value,
-            mp_pose.PoseMark.RIGHT_SHOULDER.value,
-            mp_pose.PoseMark.LEFT_ELBOW.value,
-            mp_pose.PoseMark.RIGHT_ELBOW.value,
-            mp_pose.PoseMark.LEFT_WRIST.value,
-            mp_pose.PoseMark.RIGHT_WRIST.value,
-        ]
-
-        visible_landmarks = sum(1 for i in key_landmarks if landmarks[i].visibility > 0.5)
-        if visible_landmarks < 4:
-            return jsonify({
-                'detected': False,
-                'message': 'Key points not visible enough'
-            })
-
         exercise_type = detect_exercise_type(landmarks)
         posture_feedback, posture_correct = check_posture(landmarks)
 
@@ -315,12 +608,10 @@ def analyze_pose():
         stage = None
         if angle > 160:
             stage = "down"
-        elif angle < 30 :
-            stage="up"
+        elif angle < 30:
+            stage = "up"
         else:
-            stage="halfway"
-
-        keypoints_data = extract_keypoints(landmarks)
+            stage = "halfway"
 
         response_data = {
             'detected': True,
@@ -328,27 +619,149 @@ def analyze_pose():
             'stage': stage,
             'posture_feedback': posture_feedback,
             'posture_correct': posture_correct,
-            'keypoints': keypoints_data,
             'exercise_type': exercise_type
         }
 
-        if DEEPSEEK_API_KEY:
-            landmark_data = prepare_landmark_data_for_deepseek(landmarks)
-            deepseek_analysis = query_deepseek(landmark_data, exercise_type)
-
-            if deepseek_analysis["success"]:
-                response_data.update({
-                    'posture_feedback' : deepseek_analysis["feedback"],
-                    'posture_correct' : deepseek_analysis["correct"],
-                    "stage" : deepseek_analysis["stage"],
-                    "issues" : deepseek_analysis["issues"],
-                    "improvement_tips" : deepseek_analysis["improvement_tips"],
-                    "using_ai" : True
-                })
         return jsonify(response_data)
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# @app.route('/analyze-video', methods=['POST'])
+# def analyze_video():
+#     if 'video' not in request.files:
+#         return jsonify({"error": "No file part"}), 400
+
+#     file = request.files['video']
+#     if file.filename == '':
+#         return jsonify({"error": "No selected file"}), 400
+
+#     if file and allowed_file(file.filename):
+#         filename = secure_filename(file.filename)
+#         filepath = os.path.join(UPLOAD_FOLDER, filename)
+#         file.save(filepath)
+
+#         cap = cv2.VideoCapture(filepath)
+#         frame_count = 0
+#         landmark_sequence = []
+
+#         while cap.isOpened():
+#             ret, frame = cap.read()
+#             if not ret:
+#                 break
+#             frame_count += 1
+#             if frame_count % 5 != 0:
+#                 continue
+
+#             image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#             result = pose.process(image_rgb)
+
+#             if result.pose_landmarks:
+#                 landmarks = []
+#                 for lm in result.pose_landmarks.landmark:
+#                     landmarks.append({
+#                         'x': lm.x,
+#                         'y': lm.y,
+#                         'z': lm.z,
+#                         'visibility': lm.visibility
+#                     })
+#                 landmark_sequence.append(landmarks)
+
+#         cap.release()
+#         os.remove(filepath)
+
+#         if not landmark_sequence:
+#             return jsonify({"error": "No poses detected in video"}), 400
+
+#         exercise_type = detect_exercise_type(result.pose_landmarks.landmark)
+#         analysis = analyze_rep_movement(landmark_sequence, exercise_type)
+#         return jsonify({
+#             "exercise": exercise_type,
+#             "correct_reps": analysis.get("correct_reps", 0),
+#             "incorrect_reps": analysis.get("incorrect_reps", 0),
+#             "reps": analysis.get("correct_reps", 0) + analysis.get("incorrect_reps", 0) ,
+#         })
+      
+
+#     return jsonify({"error": "File type not allowed"}), 400
+
+@app.route('/analyze-video', methods=['POST'])
+def analyze_video():
+    if 'video' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['video']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+
+        cap = cv2.VideoCapture(filepath)
+        frame_count = 0
+        landmark_sequence = []
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_count += 1
+            if frame_count % 5 != 0:
+                continue
+
+            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            result = pose.process(image_rgb)
+
+            if result.pose_landmarks:
+                landmarks = []
+                for lm in result.pose_landmarks.landmark:
+                    landmarks.append({
+                        'x': lm.x,
+                        'y': lm.y,
+                        'z': lm.z,
+                        'visibility': lm.visibility
+                    })
+                landmark_sequence.append(landmarks)
+
+        cap.release()
+        os.remove(filepath)
+
+        if not landmark_sequence:
+            return jsonify({"error": "No poses detected in video"}), 400
+
+        # Detect exercise type and analyze reps
+        exercise_type = detect_exercise_type(result.pose_landmarks.landmark)
+        rep_analysis = analyze_rep_movement(landmark_sequence, exercise_type)
+        
+        # Generate AI feedback
+        ai_feedback = generate_ai_feedback(exercise_type, landmark_sequence, rep_analysis)
+        
+        # Prepare response
+        response = {
+            "exercise": exercise_type,
+            "correct_reps": rep_analysis.get("correct_reps", 0),
+            "incorrect_reps": rep_analysis.get("incorrect_reps", 0),
+            "total_reps": rep_analysis.get("correct_reps", 0) + rep_analysis.get("incorrect_reps", 0),
+            "feedback": rep_analysis.get("feedback", []),
+            "using_ai": False
+        }
+        
+        # Include AI feedback if available
+        if ai_feedback.get("success", False):
+            response.update({
+                "ai_feedback": ai_feedback.get("feedback", "No specific feedback"),
+                "ai_issues": ai_feedback.get("issues", []),
+                "ai_improvement_tips": ai_feedback.get("improvement_tips", "Keep practicing!"),
+                "ai_positive_points": ai_feedback.get("positive_points", "Good effort!"),
+                "using_ai": True
+            })
+        
+        return jsonify(response)
+
+    return jsonify({"error": "File type not allowed"}), 400
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8001)

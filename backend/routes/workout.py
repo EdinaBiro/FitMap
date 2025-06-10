@@ -94,6 +94,7 @@ def update_workout(workout_id: int, workout_data: WorkoutUpdate, db: Session = D
 @router.delete("/delete_workout/{workout_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_workout(workout_id: int, db: Session = Depends(get_db)):
     workout = db.query(Workout).filter(Workout.workout_id == workout_id).first()
+    print(workout.workout_id,workout.workout_name)
     if not workout:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail=f"Workout with id {workout_id} not found")
     try:
