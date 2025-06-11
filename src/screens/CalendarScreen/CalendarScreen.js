@@ -242,6 +242,7 @@ const CalendarScreen = () => {
           appid: WEATHER_API,
         },
       });
+      console.log(response)
       console.log(
         'API forecast data available: ',
         response.data.list.slice(0, 3).map((item) => moment.unix(item.dt).format('YYYY-MM-DD HH:mm')),

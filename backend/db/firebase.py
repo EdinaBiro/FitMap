@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, auth
 
-cred_path = r"D:\FitMap\fitmap-449621-6a3bd03735b5.json"
+cred_path = r"D:\FitMap\backend\fitmap-449621-6a3bd03735b5.json"
 cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 
