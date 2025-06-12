@@ -1,0 +1,32 @@
+# Ignore directories
+
+**/node_modules/
+**/venv/
+**/.venv/
+**/**pycache**/
+**/.git/
+**/.vscode/
+\*\*/.idea/
+
+# Ignore logs and temp files
+
+_.log
+_.tmp
+_.swp
+_.env
+
+# Ignore build files
+
+dist/
+build/
+\*.egg-info/
+
+# Ignore OS files
+
+.DS_Store
+Thumbs.db
+
+# Ignore Docker-related files (if not needed)
+
+docker-compose.override.yml
+docker-compose.debug.yml

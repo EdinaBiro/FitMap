@@ -1,16 +1,16 @@
-import { StyleSheet, Text, View, Dimensions, ScrollView, TouchableOpacity } from 'react-native'
-import React, {useEffect, useState} from 'react'
-import { Ionicons } from '@expo/vector-icons'
+import { StyleSheet, Text, View, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
 
-const {width} = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-const WorkoutWeatherForecast = ({weatherData, selectedHour, onHourSelect}) => {
+const WorkoutWeatherForecast = ({ weatherData, selectedHour, onHourSelect }) => {
   const [selectedHourData, setSelectedHourData] = useState(null);
 
   useEffect(() => {
-    if(weatherData && weatherData.hourly){
-      const hourData = weatherData.hourly.find(h => {
+    if (weatherData && weatherData.hourly) {
+      const hourData = weatherData.hourly.find((h) => {
         const hourNum = new Date(h.dt * 1000).getHours();
         return hourNum === selectedHour;
       });
@@ -19,170 +19,196 @@ const WorkoutWeatherForecast = ({weatherData, selectedHour, onHourSelect}) => {
     }
   }, [weatherData, selectedHour]);
 
-  if(!weatherData || !weatherData.hourly){
-    return(
+  if (!weatherData || !weatherData.hourly) {
+    return (
       <View style={styles.weatherContainer}>
-        <Ionicons name="cloud-outline" size={40} color="#6200ee"/>
+        <Ionicons name="cloud-outline" size={40} color="#6200ee" />
         <Text style={styles.weatherText}>Weather forecast unavailable</Text>
       </View>
     );
   }
 
   const getWeatherIcon = (condition) => {
-    const conditionMap ={
-        'Clear': 'sunny-outline',
-        'Clouds': 'cloud-outline',
-        'Rain': 'rainy-outline',
-        'Thunderstorm': 'thunderstorm-outline',
-        'Snow': 'snow-outline',
-        'Mist': 'water-outline',
-        'Fog': 'water-outline',
-        'Drizzle': 'rainy-outline',
-        'Haze': 'water-outline'
+    const conditionMap = {
+      Clear: 'sunny-outline',
+      Clouds: 'cloud-outline',
+      Rain: 'rainy-outline',
+      Thunderstorm: 'thunderstorm-outline',
+      Snow: 'snow-outline',
+      Mist: 'water-outline',
+      Fog: 'water-outline',
+      Drizzle: 'rainy-outline',
+      Haze: 'water-outline',
     };
 
-    return conditionMap[condition] || "thermometer-outline";
-};
+    return conditionMap[condition] || 'thermometer-outline';
+  };
 
-const getWeatherColor= (condition) => {
-  const baseColor = {
-      'Clear': '#89CFF0', 
-      'Clouds': '#E6E6FA', 
-      'Rain': '#4682B4', 
-      'Thunderstorm': '#483D8B', 
-      'Snow': '#F0F8FF', 
-      'Mist': '#B0C4DE', 
-      'Fog': '#B0C4DE', 
-      'Drizzle': '#87CEEB',
-      'Haze': '#D3D3D3'
-};
-  return baseColor[condition] || "#89CFF0";
-};
+  const getWeatherColor = (condition) => {
+    const baseColor = {
+      Clear: '#89CFF0',
+      Clouds: '#E6E6FA',
+      Rain: '#4682B4',
+      Thunderstorm: '#483D8B',
+      Snow: '#F0F8FF',
+      Mist: '#B0C4DE',
+      Fog: '#B0C4DE',
+      Drizzle: '#87CEEB',
+      Haze: '#D3D3D3',
+    };
+    return baseColor[condition] || '#89CFF0';
+  };
 
-const getWeatherBackground = (condition) => {
-  const mainColor = getWeatherColor(condition);
-  return {
-    'Clear': `linear-gradient(to bottom, ${mainColor}, #87CEFA)`,
-    'Clouds': `linear-gradient(to bottom, ${mainColor}, #F0F8FF)`,
-    'Rain': `linear-gradient(to bottom, ${mainColor}, #1A3C5B)`,
-    'Thunderstorm': `linear-gradient(to bottom, ${mainColor}, #191970)`,
-    'Snow': `linear-gradient(to bottom, ${mainColor}, #F0F8FF)`,
-    'Mist': `linear-gradient(to bottom, ${mainColor}, #B0C4DE)`,
-    'Fog': `linear-gradient(to bottom, ${mainColor}, #B0C4DE)`,
-    'Drizzle': `linear-gradient(to bottom, ${mainColor}, #4682B4)`,
-    'Haze': `linear-gradient(to bottom, ${mainColor}, #B0C4DE)`
-  }[condition] || `linear-gradient(to bottom, ${mainColor}, #F0F8FF)`;
-};
+  const getWeatherBackground = (condition) => {
+    const mainColor = getWeatherColor(condition);
+    return (
+      {
+        Clear: `linear-gradient(to bottom, ${mainColor}, #87CEFA)`,
+        Clouds: `linear-gradient(to bottom, ${mainColor}, #F0F8FF)`,
+        Rain: `linear-gradient(to bottom, ${mainColor}, #1A3C5B)`,
+        Thunderstorm: `linear-gradient(to bottom, ${mainColor}, #191970)`,
+        Snow: `linear-gradient(to bottom, ${mainColor}, #F0F8FF)`,
+        Mist: `linear-gradient(to bottom, ${mainColor}, #B0C4DE)`,
+        Fog: `linear-gradient(to bottom, ${mainColor}, #B0C4DE)`,
+        Drizzle: `linear-gradient(to bottom, ${mainColor}, #4682B4)`,
+        Haze: `linear-gradient(to bottom, ${mainColor}, #B0C4DE)`,
+      }[condition] || `linear-gradient(to bottom, ${mainColor}, #F0F8FF)`
+    );
+  };
 
-  const currentWeather = weatherData.current.weather && weatherData.current.weather.length > 0
-    ? weatherData.current.weather[0]
-    : null;
-  const currentCondition = currentWeather ? currentWeather.main: 'Clear';
-  const currentTemp = weatherData.current.temp ? Math.round(weatherData.current.temp): 0;
+  const currentWeather =
+    weatherData.current.weather && weatherData.current.weather.length > 0 ? weatherData.current.weather[0] : null;
+  const currentCondition = currentWeather ? currentWeather.main : 'Clear';
+  const currentTemp = weatherData.current.temp ? Math.round(weatherData.current.temp) : 0;
+
   const mainColor = getWeatherColor(currentCondition);
 
-  const hourlyForecast = weatherData.hourly.slice(0,24).map((hour, index) => {
-    if(!hour || !hour.weather || !hour.weather[0]){
-      return null;
-    }
-    const time = new Date(hour.dt * 1000);
-    const hourNum = time.getHours();
-    const ampm = hourNum >=12 ? 'PM' : 'AM';
-    const hour12 = hourNum % 12 || 12;
-    const timeString = `${hour12}${ampm}`;
-    const temp = Math.round(hour.temp);
-    const condition = hour.weather[0].main;
-    const isSelected = selectedHour === hourNum;
-    const date = time;
+  const hourlyForecast = weatherData.hourly
+    .slice(0, 24)
+    .map((hour, index) => {
+      if (!hour || !hour.weather || !hour.weather[0]) {
+        return null;
+      }
+      const time = new Date(hour.dt * 1000);
+      const hourNum = time.getHours();
+      const ampm = hourNum >= 12 ? 'PM' : 'AM';
+      const hour12 = hourNum % 12 || 12;
+      const timeString = `${hour12}${ampm}`;
+      const temp = Math.round(hour.temp);
+      const condition = hour.weather[0].main;
+      const isSelected = selectedHour === hourNum;
+      const date = time;
 
-    return { time: timeString, hourNum, temp, condition, isSelected, date, description: hour.weather[0].description};
-  }).filter(item => item!=null);
+      return {
+        currentTemp,
+        time: timeString,
+        hourNum,
+        temp,
+        condition,
+        isSelected,
+        date,
+        description: hour.weather[0].description,
+      };
+    })
+    .filter((item) => item != null);
 
-  const selectedForecast = hourlyForecast.find(h => h.isSelected) || hourlyForecast[0];
+  const selectedForecast = hourlyForecast.find((h) => h.isSelected) || hourlyForecast[0];
 
   return (
     <View style={styles.container}>
-      <View style={[styles.mainCard,{backgroundColor: mainColor}]}>
+      <View style={[styles.mainCard, { backgroundColor: mainColor }]}>
         <View style={styles.locationRow}>
-        <Ionicons name="location" size={18} color="#fff"/>
-        <Text style={styles.locationText}>{weatherData.city || "Current Location"}</Text>
-      </View>
-
-      <View style={styles.currentWeatherContainer}>
-        <View style={styles.temperatureContainer}>
-          <Text style={styles.temperatureText}>{selectedForecast.temp}°</Text>
-          <Text style={styles.conditionText}>{selectedForecast.description}</Text>
-          <Text style={styles.dateText}>{moment(selectedForecast.date).format('h:mm A,MMM D')}</Text>
+          <Ionicons name="location" size={18} color="#fff" />
+          <Text style={styles.locationText}>{weatherData.city || 'Current Location'}</Text>
         </View>
 
-      <View style={styles.iconContainer}>
-        <Ionicons name={getWeatherIcon(selectedForecast.condition)} size={80}
-        color='#fff' style={styles.weatherIcon} />
-      </View>
-    </View>
-  
-  <View style={styles.hourlyContainer}>
-    <Text style={styles.sectionTitle}>HOURLY FORECAST</Text>
-    <ScrollView horizontal showHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyScrollContent}>
-      {hourlyForecast.map((hour, index) => (
-        <TouchableOpacity key={index} style={[styles.hourItem, hour.isSelected && styles,selectedHourItem]}
-        onPress={() => onHourSelect(hour.hourNum)}>
-          <Text style={[styles.hourTime,hour.isSelected && styles.selectedText]}>
-            {hour.time}
-          </Text>
-          <Ionicons name={getWeatherIcon(hour.condition)} size={24} color={hour.isSelected ? "#fff":"#555"} style={styles.hourIcon}/>
-          <Text style={[styles.hourTemp, hour.isSelected && styles.selectedText]}>
-            {hour.temp}°
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  </View>
+        <View style={styles.currentWeatherContainer}>
+          <View style={styles.temperatureContainer}>
+            <Text style={styles.temperatureText}>{selectedForecast.temp}°</Text>
+            <Text style={styles.conditionText}>{selectedForecast.description}</Text>
+            <Text style={styles.dateText}>{moment(selectedForecast.date).format('h:mm A,MMM D')}</Text>
+          </View>
 
-      <View style={styles.dailyContainer}>
-        <View style={styles.dailyRow}>
-          <Ionicons name="water-outline" size={18} color="#555"/>
-          <Text style={styles.dailyLabel}>Humidity</Text>
-          <Text style={styles.dailyValue}>{weatherData.current.humidity || "N/A"}%</Text>
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name={getWeatherIcon(selectedForecast.condition)}
+              size={80}
+              color="#fff"
+              style={styles.weatherIcon}
+            />
+          </View>
         </View>
-        
-      </View>
+
+        <View style={styles.hourlyContainer}>
+          <Text style={styles.sectionTitle}>HOURLY FORECAST</Text>
+          <ScrollView
+            horizontal
+            showHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.hourlyScrollContent}
+          >
+            {hourlyForecast.map((hour, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[styles.hourItem, hour.isSelected && styles, selectedHourItem]}
+                onPress={() => onHourSelect(hour.hourNum)}
+              >
+                <Text style={[styles.hourTime, hour.isSelected && styles.selectedText]}>{hour.time}</Text>
+                <Ionicons
+                  name={getWeatherIcon(hour.condition)}
+                  size={24}
+                  color={hour.isSelected ? '#fff' : '#555'}
+                  style={styles.hourIcon}
+                />
+                <Text style={[styles.hourTemp, hour.isSelected && styles.selectedText]}>{hour.temp}°</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.dailyContainer}>
+          <View style={styles.dailyRow}>
+            <Ionicons name="water-outline" size={18} color="#555" />
+            <Text style={styles.dailyLabel}>Humidity</Text>
+            <Text style={styles.dailyValue}>{weatherData.current.humidity || 'N/A'}%</Text>
+          </View>
+        </View>
 
         <View style={styles.dailyRow}>
-          <Ionicons name="speedometer-outline" size={18} color="#555"/>
+          <Ionicons name="speedometer-outline" size={18} color="#555" />
           <Text style={styles.dailyLabel}>Pressure</Text>
-          <Text style={styles.dailyValue}>{weatherData.current.pressure || "N/A"}hPa</Text>
+          <Text style={styles.dailyValue}>{weatherData.current.pressure || 'N/A'}hPa</Text>
         </View>
-        
 
         <View style={styles.dailyRow}>
-          <Ionicons name="eye-outline" size={18} color="#555"/>
+          <Ionicons name="eye-outline" size={18} color="#555" />
           <Text style={styles.dailyLabel}>Visibility</Text>
-          <Text style={styles.dailyValue}>{weatherData.current.visibility ? (weatherData.current.visibility / 1000).toFixed(1) : "N/A"}km</Text>
+          <Text style={styles.dailyValue}>
+            {weatherData.current.visibility ? (weatherData.current.visibility / 1000).toFixed(1) : 'N/A'}km
+          </Text>
         </View>
-       </View>
+      </View>
 
-       <View style={styles.recommendationContainer}>
+      <View style={styles.recommendationContainer}>
         <Text style={styles.recommendationTitle}>Workout Recommendation</Text>
         <Text style={styles.recommendationText}>
           {getWorkoutRecommendation(selectedForecast.condition, selectedForecast.temp)}
         </Text>
-       </View>
-       </View>
+      </View>
+    </View>
   );
 };
 
 const getWorkoutRecommendation = (condition, temp) => {
-  if (condition === 'Thunderstorm' || condition === 'Rain' && temp < 15) {
+  if (condition === 'Thunderstorm' || (condition === 'Rain' && temp < 15)) {
     return "Consider indoor workouts today. Weather conditions aren't ideal for outdoor activities.";
   } else if (condition === 'Clear' && temp > 30) {
     return "It's quite hot! Stay hydrated and consider working out during cooler hours.";
   } else if (condition === 'Snow' || temp < 5) {
-    return "Dress in warm layers for outdoor workouts or consider indoor alternatives.";
-  } else if (condition === 'Clear' || condition === 'Clouds' && temp >= 15 && temp <= 25) {
-    return "Perfect weather for your workout! Enjoy your outdoor session.";
+    return 'Dress in warm layers for outdoor workouts or consider indoor alternatives.';
+  } else if (condition === 'Clear' || (condition === 'Clouds' && temp >= 15 && temp <= 25)) {
+    return 'Perfect weather for your workout! Enjoy your outdoor session.';
   } else {
-    return "Weather is acceptable for your planned workout. Prepare accordingly.";
+    return 'Weather is acceptable for your planned workout. Prepare accordingly.';
   }
 };
 

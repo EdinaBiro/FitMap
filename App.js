@@ -1,5 +1,5 @@
-import { SafeAreaView, StyleSheet, Text, useColorScheme, View , ScrollView, ActivityIndicator} from 'react-native';
-import React, {useState, useEffect, createContext} from 'react';
+import { SafeAreaView, StyleSheet, Text, useColorScheme, View, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, createContext } from 'react';
 import Navigation from './src/navigation/index';
 import { AppRegistry } from 'react-native';
 import { name as appName } from './app.json';
@@ -11,13 +11,13 @@ import { navigationRef } from './src/navigation/NavigationRef';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NavigationProvider from './src/screens/OnBoardingScreen/NavigationProvider';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export const AuthContext = createContext();
 const App = () => {
-
-const [user, setUser] = useState(null);
-const [isFirstLaunch, setIsFirstLaunch] = useState(null);
-const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [isFirstLaunch, setIsFirstLaunch] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   function onAuthStateChanged(user) {
     setUser(user);
@@ -25,24 +25,24 @@ const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const chechFirstLaunch = async () => {
-      try{
+      try {
         //await AsyncStorage.removeItem('alreadyLaunched');
         const value = await AsyncStorage.getItem('alreadyLaunched');
-        if(value === null){
+        if (value === null) {
           await AsyncStorage.setItem('alreadyLaunched', 'true');
           setIsFirstLaunch(true);
-        }else{
+        } else {
           setIsFirstLaunch(false);
         }
-      }catch(error){
+      } catch (error) {
         console.error('Error checking first launch: ', error);
         setIsFirstLaunch(false);
-      }finally{
+      } finally {
         setIsLoading(false);
       }
     };
 
-    const authSubsrciber = auth().onAuthStateChanged(user => {
+    const authSubsrciber = auth().onAuthStateChanged((user) => {
       setUser(user);
     });
 
@@ -50,44 +50,31 @@ const [isLoading, setIsLoading] = useState(true);
 
     return () => {
       authSubsrciber();
-  //   };
-  // },[]);
-  };
-  },[]);
+      //   };
+      // },[]);
+    };
+  }, []);
 
- 
-
-  if(isLoading){
-    return(
-      <View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator size="large"/>
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-     <AuthContext.Provider value={{ user }}>
-         
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthContext.Provider value={{ user }}>
         <ThemeProvider>
           <NavigationContainer ref={navigationRef}>
-            {user ? (
-              <DrawerNavigation/>
-             ) : (
-              <>
-              {isFirstLaunch ? (
-                <NavigationProvider/>
-              ):(
-                <Navigation />
-             
-               )}  
-              </>
-             )}
+            {user ? <DrawerNavigation /> : <>{isFirstLaunch ? <NavigationProvider /> : <Navigation />}</>}
           </NavigationContainer>
         </ThemeProvider>
-        </AuthContext.Provider>
+      </AuthContext.Provider>
+    </GestureHandlerRootView>
   );
 };
-
 
 AppRegistry.registerComponent(appName, () => App);
 
@@ -96,7 +83,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'F9FBFC',
   },
-  
 });
 
 export default App;

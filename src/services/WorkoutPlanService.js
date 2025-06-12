@@ -4,8 +4,22 @@ import { getAuth } from 'firebase/auth';
 
 const getAuthToken = async () => {
   try {
-    const token = await AsyncStorage.getItem('authToken');
-    return token;
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      const idToken = await user.getIdToken(true);
+      return idToken;
+    }
+
+    const storedToken = await AsyncStorage.getItem('userToken');
+
+    if (storedToken) {
+      return storedToken;
+    }
+
+    console.warn('No authentification token found');
+    return null;
   } catch (error) {
     console.error('Error getting auth token: ', error);
     return null;
@@ -92,7 +106,7 @@ export const syncPendingOnBoardingData = async (token) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(parsed),
     });
     if (response.ok) {
       console.log('Onboarding data successfullly sync to server');
