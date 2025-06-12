@@ -1,6 +1,6 @@
 import { View, Text, Dimensions, Alert, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import LottieView from 'lottie-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { generateWorkoutPlan, getWorkoutPlan } from '../../services/WorkoutPlanService';
 import { useFocusEffect } from '@react-navigation/native';
+import { resetToLogin } from '../../navigation/NavigationRef';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -48,11 +49,20 @@ const PersonalPlanScreen = () => {
       setLoading(true);
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        navigation.replace('LoginScreen');
-        return;
+        resetToLogin();
       }
 
       const planData = await getWorkoutPlan();
+
+      if (!planData || !planData.plan) {
+        setWorkoutPlan(null);
+        setWorkoutSessions(null);
+        setUserInfo(planData?.user_info || null);
+      } else {
+        setWorkoutPlan(planData.plan);
+        setWorkoutSessions(planData.sessions || []);
+        setUserInfo(planData.user_info);
+      }
       setWorkoutPlan(planData.plan);
       setWorkoutSessions(planData.sessions || []);
       setUserInfo(planData.user_info);

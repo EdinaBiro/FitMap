@@ -346,17 +346,17 @@ async def generate_workout_plan(db: Session= Depends(get_db),user_id: str= Depen
         plan_id = plan_result.fetchone()[0]
 
         for session_data in ai_plan["sessions"]:
-            session_result= db.execute("""
-                INSERT INTO workout_sessions(workout_plan_id, day_ok_week, session_name, description, estimated_duration)
-                VALUES (:plan_id, :days_of_week, :session_name, :description,:duration)
-                RETURNING id
-            """, {
-                
-                "plan_id" : plan_id, 
-                "days of week": session_data["day_of_week"], 
-                "session_name": session_data["session_name"], 
-                "description":session_data.get("description"), 
-                "duration":session_data["estimated_duration"]})    
+            session_result = db.execute("""
+    INSERT INTO workout_sessions(workout_plan_id, day_of_week, session_name, description, estimated_duration)
+    VALUES (:plan_id, :day_of_week, :session_name, :description, :duration)
+    RETURNING id
+""", {
+    "plan_id": plan_id, 
+    "day_of_week": session_data["day_of_week"],
+    "session_name": session_data["session_name"], 
+    "description": session_data.get("description"), 
+    "duration": session_data["estimated_duration"]
+})  
             session_id = session_result.fetchone()[0]                     
                                            
             for exercise in session_data["exercises"]:
@@ -368,9 +368,9 @@ async def generate_workout_plan(db: Session= Depends(get_db),user_id: str= Depen
                 "exercise_name": exercise["exercise_name"], 
                 "sets":exercise["sets"], 
                 "reps":exercise["reps"], 
-                "rest_records":exercise["rest_seconds"], 
-                "instructions":exercise["instructions", 
-                "exercise_order":exercise["exercise_order"]]})  
+                "rest_seconds":exercise["rest_seconds"], 
+                "instructions":exercise["instructions"], 
+                "exercise_order":exercise["exercise_order"]})  
 
 
         db.commit()
@@ -390,7 +390,7 @@ async def generate_workout_plan(db: Session= Depends(get_db),user_id: str= Depen
 async def get_workout_plan(db: Session = Depends(get_db), user_id: str = Depends(get_current_user)):
     try:
         plan_result = db.execute("""
-                SELECT id, plan_name, workout_per_week, difficulty_level, created_at
+                SELECT id, plan_name, workout_days_per_week, difficulty_level, created_at
                 FROM workout_plans
                 WHERE user_id = :user_id AND is_active = TRUE
                 ORDER BY created_at DESC
@@ -417,17 +417,17 @@ async def get_workout_plan(db: Session = Depends(get_db), user_id: str = Depends
                                     
                                     """, {"plan_id": plan_id}).fetchall()
         user_answers_result = db.execute("""
-                SELECT question_key, asnwer_value
-                FROM  questionnaire_answers
-                WHERE user_id = :user_id                   
-                                        """, {"user_id": user_id}).fetchall()  
+    SELECT question_key, answer_value
+    FROM questionnaire_answers
+    WHERE user_id = :user_id                   
+""", {"user_id": user_id}).fetchall()
 
         user_info = {row[0]:row[1] for row in user_answers_result}
 
         sessions_list =[]
         for session in sessions_result:
             sessions_list.append({
-                "id" : session['id'],
+                "id" : session[0],
                 "days_of_week": session["days_of_week"],
                 "description": session['description'],
                 "estimated_duration": session['estimated_duration'],
@@ -458,12 +458,15 @@ async def get_workout_session_details(
     user_id: str = Depends(get_current_user)
 ):
     try:
-        session_result = db.execute("""
-            SELECT ws.id, ws.session_name, ws.description, ws.estimated_duration, ws.day_of_week
-            FROM workout_sessions ws
-            JOIN workout_plans wp ON ws.workout_plan_id = wp.id
-            WHERE ws.id = :session_id AND wp.user_id = :user_id AND wp.is_active = TRUE
-        """, {"session_id": session_id, "user_id": user_id}).fetchone()
+        sessions_result = db.execute("""
+    SELECT ws.id, ws.day_of_week, ws.session_name, ws.description, ws.estimated_duration,
+           COUNT(we.id) as exercise_count
+    FROM workout_sessions ws
+    LEFT JOIN workout_exercises we ON ws.id = we.workout_session_id
+    WHERE ws.workout_plan_id = :plan_id
+    GROUP BY ws.id, ws.day_of_week, ws.session_name, ws.description, ws.estimated_duration
+    ORDER BY ws.day_of_week             
+""", {"plan_id": plan_id}).fetchall()
         
         if not session_result:
             raise HTTPException(
