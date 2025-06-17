@@ -149,7 +149,7 @@ const WorkoutWeatherForecast = ({ weatherData, selectedHour, onHourSelect }) => 
             {hourlyForecast.map((hour, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.hourItem, hour.isSelected && styles, selectedHourItem]}
+                style={[styles.hourItem, hour.isSelected && styles]}
                 onPress={() => onHourSelect(hour.hourNum)}
               >
                 <Text style={[styles.hourTime, hour.isSelected && styles.selectedText]}>{hour.time}</Text>

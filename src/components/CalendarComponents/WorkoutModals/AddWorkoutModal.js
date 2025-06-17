@@ -17,6 +17,7 @@ const AddWorkoutModal = ({
   handleTimeChange,
   saveWorkoutPlan,
   weatherData,
+  selectedDate,
 }) => {
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
   const [processedWeatherData, setProcessedWeatherData] = useState(null);
@@ -31,7 +32,8 @@ const AddWorkoutModal = ({
               humidity: item.main.humidity,
               pressure: item.main.pressure,
               visibility: item.main.visibility,
-              weather: item.weather,
+              weather: item.weather || [{ main: 'Clear', description: 'clear sky' }],
+              main: item.main || {},
             }))
           : [];
 
@@ -65,7 +67,7 @@ const AddWorkoutModal = ({
   }, [workoutPlan.time]);
 
   const handleHourSeelect = (hour) => {
-    const newTime = new Date(workoutPlan.time || new Date());
+    const newTime = new Date(workoutPlan.time);
     newTime.setHours(hour);
     newTime.setMinutes(0);
 
@@ -80,8 +82,8 @@ const AddWorkoutModal = ({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               Plan Workout for{' '}
-              {workoutPlan.date && moment(workoutPlan.date).isValid()
-                ? moment(workoutPlan.date).format('YYYY-MM-DD')
+              {selectedDate && moment(selectedDate).isValid()
+                ? moment(selectedDate).format('YYYY-MM-DD')
                 : moment().format('YYYY-MM-DD')}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -90,12 +92,17 @@ const AddWorkoutModal = ({
           </View>
 
           <ScrollView style={styles.modalBody} showHorizontalScrollIndicator={false}>
-            {processedWeatherData && (
+            {processedWeatherData && processedWeatherData.hourly ? (
               <WorkoutWeatherForecast
                 weatherData={processedWeatherData}
                 selectedHour={currentHour}
                 onHourSelect={handleHourSeelect}
               />
+            ) : (
+              <View style={styles.weatherErrorContainer}>
+                <Ionicons name="cloud-offline-outline" size={40} color="#6200ee" />
+                <Text style={styles.weatherErrorText}>Weather forecast unavailable</Text>
+              </View>
             )}
           </ScrollView>
 

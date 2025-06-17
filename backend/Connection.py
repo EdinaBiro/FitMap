@@ -33,8 +33,8 @@ pose = mp_pose.Pose(
 )
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-
+# DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_API_KEY = "sk-36f6239bc5444b5fa6f5c9e9536b77ab"
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -338,77 +338,9 @@ def summarize_pose_data(landmarks_sequence, exercise_type):
                     [left_wrist['x'], left_wrist['y']]
                 )
 
-                summary["key_observations"].append(f"{frame_name}_elbow_angle: {angle: 1.f}°")
+                summary["key_observations"].append(f"{frame_name}_elbow_angle: {angle: 1.0f}°")
     return json.dumps(summary, indent=2)
 
-# def generate_ai_feedback(exercise_type,landmarks_sequence,rep_analysis):
-
-#     if not DEEPSEEK_API_KEY:
-#         print("Warning: api key not se")
-#         return {
-#             "success" : False,
-#             "message" : "Api key not configured"
-#         }
-    
-#     pose_summary = summarize_pose_data(landmarks_sequence, exercise_type)
-#     prompt = f"""
-#     You are an expert fitness trainer analyzing form. The user performed '{exercise_type}'
-
-#     Analysis Results:
-#     - Total Reps: {rep_analysis['reps']}
-#     - Correct Form Reps: {rep_analysis['correct_reps']}
-#     - Poor Form Reps: {rep_analysis['incorrect_reps']}
-    
-#     Pose Data Summary:
-#     {pose_summary}
-    
-#     Provide constructive feedback in this exact JSON format:
-#     {{
-#         "feedback": "Overall assessment of the exercise performance",
-#         "correct": true/false,
-#         "issues": ["specific issue 1", "specific issue 2"],
-#         "improvement_tips": "Specific tips to improve form and technique",
-#         "positive_points": "What the user did well"
-#     }}
-    
-#     ONLY respond with valid JSON following the above structure. No additional text.
-#     """
-    
-#     headers = {
-#         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-#         "Content-Type": "application/json"
-#     }
-    
-#     payload = {
-#         "model": "deepseek-chat",
-#         "messages": [
-#             {"role": "user", "content": prompt}
-#         ],
-#         "temperature": 0.7,
-#         "response_format": {"type": "json_object"}
-#     }
-    
-#     try:
-#         response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers, timeout=30)
-#         if response.status_code == 200:
-#             content = response.json()
-#             if "choices" in content and len(content["choices"]) > 0:
-#                 feedback_text = content["choices"][0]["message"]["content"]
-#                 feedback_json = json.loads(feedback_text)
-#                 return {
-#                     "success": True,
-#                     **feedback_json
-#                 }
-#         return {
-#             "success": False,
-#             "message": f"API Error: {response.status_code}",
-#             "details": response.text
-#         }
-#     except Exception as e:
-#         return {
-#             "success": False,
-#             "message": f"Error: {str(e)}"
-#         }
 
 def generate_ai_feedback(exercise_type, landmarks_sequence, rep_analysis):
     """Generate friendly fitness feedback using AI with emojis and natural language"""

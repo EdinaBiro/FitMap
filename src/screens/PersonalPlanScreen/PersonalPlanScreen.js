@@ -1,17 +1,100 @@
-import { View, Text, Dimensions, Alert, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { CommonActions, useNavigation } from '@react-navigation/native';
-import { Animated } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
-import LottieView from 'lottie-react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { generateWorkoutPlan, getWorkoutPlan } from '../../services/WorkoutPlanService';
-import { useFocusEffect } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { resetToLogin } from '../../navigation/NavigationRef';
+import { generateWorkoutPlan, getWorkoutPlan } from '../../services/WorkoutPlanService';
+import { getAuthToken } from '../../services/StatisticsService';
 
 const { width: screenWidth } = Dimensions.get('window');
+
+// New WorkoutCard component to separate hook usage
+const WorkoutCard = ({ session, index, onStartWorkout }) => {
+  const cardDelay = index * 100;
+  const cardFadeAnim = useRef(new Animated.Value(0)).current;
+  const cardSlideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(cardFadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardSlideAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, cardDelay);
+  }, []);
+
+  const getDayName = (dayNumber) => {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return days[dayNumber - 1] || 'Day';
+  };
+
+  return (
+    <Animated.View
+      style={[
+        styles.workoutCard,
+        {
+          opacity: cardFadeAnim,
+          transform: [{ translateY: cardSlideAnim }],
+        },
+      ]}
+    >
+      <LinearGradient
+        colors={['#6200ee', '#3799b3']}
+        style={styles.workoutCardGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.workoutCardHeader}>
+          <View style={styles.dayInfo}>
+            <Text style={styles.dayNumber}>Day {session.day_of_week}</Text>
+            <Text style={styles.dayName}>{getDayName(session.day_of_week)}</Text>
+          </View>
+          <MaterialIcons name="fitness-center" size={24} color="white" />
+        </View>
+        <Text style={styles.sessionName}>{session.session_name}</Text>
+
+        {session.description && <Text style={styles.sessionDescription}>{session.description}</Text>}
+
+        <View style={styles.sessionStats}>
+          <View style={styles.statItem}>
+            <MaterialIcons name="schedule" size={16} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.statText}>{session.estimated_duration || 45} min</Text>
+          </View>
+          <View style={styles.statItem}>
+            <MaterialIcons name="fitness-center" size={16} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.statText}>{session.exercise_count || 0} exercises</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.startWorkoutButton} onPress={() => onStartWorkout(session)} activeOpacity={0.8}>
+          <Text style={styles.startWorkoutButtonText}>Start Workout</Text>
+          <MaterialIcons name="play-arrow" size={20} color="#6200ee" />
+        </TouchableOpacity>
+      </LinearGradient>
+    </Animated.View>
+  );
+};
 
 const PersonalPlanScreen = () => {
   const navigation = useNavigation();
@@ -47,25 +130,32 @@ const PersonalPlanScreen = () => {
   const loadPersonalPlan = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await getAuthToken();
       if (!token) {
         resetToLogin();
       }
 
       const planData = await getWorkoutPlan();
+      console.log('Plan Data:', JSON.stringify(planData, null, 2));
+
+      if (planData && planData.sessions) {
+        planData.sessions.forEach((session, index) => {
+          console.log(`Session ${index}:`, JSON.stringify(session, null, 2));
+          console.log(`Session ${index} exercises:`, session.exercises);
+          console.log(`Session ${index} exercises type:`, typeof session.exercises);
+          console.log(`Session ${index} exercises is array:`, Array.isArray(session.exercises));
+        });
+      }
 
       if (!planData || !planData.plan) {
         setWorkoutPlan(null);
-        setWorkoutSessions(null);
+        setWorkoutSessions([]);
         setUserInfo(planData?.user_info || null);
       } else {
         setWorkoutPlan(planData.plan);
         setWorkoutSessions(planData.sessions || []);
         setUserInfo(planData.user_info);
       }
-      setWorkoutPlan(planData.plan);
-      setWorkoutSessions(planData.sessions || []);
-      setUserInfo(planData.user_info);
     } catch (error) {
       console.error('Error loading personal plan:', error);
       Alert.alert('Error', 'Failed to load your workout plan. Please try again', [
@@ -83,11 +173,6 @@ const PersonalPlanScreen = () => {
     setRefreshing(false);
   };
 
-  const getDayName = (dayNumber) => {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    return days[dayNumber - 1] || 'Day';
-  };
-
   const getMotivationalMessage = () => {
     const messages = [
       'Every workout brings you closer to your goals! 💪',
@@ -101,9 +186,7 @@ const PersonalPlanScreen = () => {
 
   const startWorkout = (session) => {
     navigation.navigate('WorkoutSessionScreen', {
-      sessionId: session.id,
-      sessionName: session.session_name,
-      exercises: session.exercises || [],
+      session: session,
     });
   };
 
@@ -139,76 +222,6 @@ const PersonalPlanScreen = () => {
         },
       },
     ]);
-  };
-
-  const renderWorkoutCard = (session, index) => {
-    const cardDelay = index * 100;
-    const cardFadeAnim = useRef(new Animated.Value(0)).current;
-    const cardSlideAnim = useRef(new Animated.Value(30)).current;
-
-    useEffect(() => {
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(cardFadeAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(cardSlideAnim, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }, cardDelay);
-    }, []);
-
-    return (
-      <Animated.View
-        key={session.id}
-        style={[
-          styles.workoutCard,
-          {
-            opacity: cardFadeAnim,
-            transform: [{ translateY: cardSlideAnim }],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={['#6200ee', '#3799b3']}
-          style={styles.workoutCardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.workoutCardHeader}>
-            <View style={styles.dayInfo}>
-              <Text style={styles.dayNumber}>Day {session.day_of_week}</Text>
-              <Text style={styles.dayName}>{getDayName(session.day_of_week)}</Text>
-            </View>
-            <MaterialIcons name="fitness-center" size={24} color="white" />
-          </View>
-          <Text style={styles.sessionName}>{session.session_name}</Text>
-
-          {session.description && <Text style={styles.sessionDescription}>{session.description}</Text>}
-
-          <View style={styles.sessionStats}>
-            <View style={styles.statItem}>
-              <MaterialIcons name="schedule" size={16} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.statText}>{session.estimated_duration || 45} min</Text>
-            </View>
-            <View style={styles.statItem}>
-              <MaterialIcons name="fitness-center" size={16} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.statText}>{session.exercise_count || 0} exercises</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.startWorkoutButton} onPress={() => startWorkout(session)} activeOpacity={0.8}>
-            <Text style={styles.startWorkoutButtonText}>Start Workout</Text>
-            <MaterialIcons name="play-arrow" size={20} color="#6200ee" />
-          </TouchableOpacity>
-        </LinearGradient>
-      </Animated.View>
-    );
   };
 
   if (loading && !refreshing) {
@@ -276,7 +289,9 @@ const PersonalPlanScreen = () => {
 
         <View style={styles.workoutCardsContainer}>
           {workoutSessions.length > 0 ? (
-            workoutSessions.map((session, index) => renderWorkoutCard(session, index))
+            workoutSessions.map((session, index) => (
+              <WorkoutCard key={session.id} session={session} index={index} onStartWorkout={startWorkout} />
+            ))
           ) : (
             <View style={styles.emptyState}>
               <LottieView

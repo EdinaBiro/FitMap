@@ -1,29 +1,17 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  Image,
-  useWindowDimensions,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
-import Logo from '../../../assets/images/logo.png';
-import CustomInput from '../../components/CustomInput';
-import { useState, useEffect } from 'react';
-import CustomButton from '../../components/CustomButton/CustomButton';
-import { TextInput } from 'react-native-gesture-handler';
-import { useForm, Controller } from 'react-hook-form';
-import { useNavigation } from '@react-navigation/native';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import auth from '@react-native-firebase/auth';
-import { AuthenticationToken, LoginManager, AccessToken } from 'react-native-fbsdk-next';
-import { signInWithPopup } from 'firebase/auth';
-import { provider } from '../../Firebase/firebase';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useNavigation } from '@react-navigation/native';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Image, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AccessToken, AuthenticationToken, LoginManager } from 'react-native-fbsdk-next';
+import Logo from '../../../assets/images/logo.png';
+import CustomButton from '../../components/CustomButton/CustomButton';
+import CustomInput from '../../components/CustomInput';
+import { hasPendingOnBoardingData, syncPendingOnBoardingData } from '../../services/WorkoutPlanService';
 import { baseURL } from '../../utils';
-import { syncPendingOnBoardingData, hasPendingOnBoardingData } from '../../services/WorkoutPlanService';
+import { sendPendingOnBoardingData } from '../../services/WorkoutPlanService';
 
 const LoginScreen = () => {
   const [initializing, setInitializing] = useState(true);
@@ -174,35 +162,6 @@ const LoginScreen = () => {
     }
   };
 
-  // const sendPendingOnBoardingData = async (token) => {
-  //   try {
-  //     const pendingData = await AsyncStorage.getItem('pendingOnBoardingData');
-  //     if (!pendingData) {
-  //       console.log('No pending onboarding data found');
-  //       return;
-  //     }
-
-  //     const parsed = JSON.parse(pendingData);
-
-  //     const response = await fetch(`${baseURL}/plan/onboarding`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //       body: JSON.stringify(parsed),
-  //     });
-  //     if (response.ok) {
-  //       console.log('Onboarding data successfully sent');
-  //       await AsyncStorage.removeItem('pendingOnBoardingData');
-  //     } else {
-  //       console.warn('Failed to send onboarding data:', response.status);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error sending onboarding data:', error);
-  //   }
-  // };
-
   const handleLoginSuccess = async (user, token) => {
     try {
       await AsyncStorage.setItem('authToken', token);
@@ -289,10 +248,7 @@ const LoginScreen = () => {
             onPress={
               Platform.OS === 'ios'
                 ? () => onFacebookButtonPressIOS().then(() => handleSubmit(onLoginPressed))
-                : () =>
-                    onFacebookButtonPressAndroid()
-                      .then(handleLogin)
-                      .catch((err) => console.error(err, 'error'))
+                : () => onFacebookButtonPressAndroid().catch((err) => console.error(err, 'error'))
             }
             bgColor="#E7EAF4"
             fgColor="#4765A9"

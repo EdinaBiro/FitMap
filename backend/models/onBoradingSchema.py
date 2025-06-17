@@ -13,3 +13,4 @@ class OnBoardingData(BaseModel):
     height: str
     weight: str
     gender: str
+    userId: str

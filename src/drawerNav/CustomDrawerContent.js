@@ -6,12 +6,14 @@ import { ThemeContext } from './ThemeContext';
 import { navigationRef } from '../navigation/NavigationRef';
 import auth from '@react-native-firebase/auth';
 import { baseURL } from '../utils';
+import { useNavigation } from '@react-navigation/native';
 
 const CustomDrawerContent = (props) => {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const { isDarkTheme, setIsDarkTheme } = useContext(ThemeContext);
   const [profileImage, setProfileImage] = useState(null);
   const [userId, setUserId] = useState(null);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -53,10 +55,7 @@ const CustomDrawerContent = (props) => {
 
       console.log('NavigationRef: ', navigationRef);
 
-      props.navigation.reset({
-        index: 0,
-        routes: [{ name: 'LoginScreen' }],
-      });
+      navigation.navigate('LoginScreen');
     } catch (e) {
       console.log('Error during logout: ', e);
     }

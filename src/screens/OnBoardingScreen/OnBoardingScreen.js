@@ -1,18 +1,17 @@
-import { Text, View, Image, TouchableOpacity, Animated, ScrollView, TextInput, Alert, Touchable } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigation, CommonActions, usePreventRemove } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import LottieView from 'lottie-react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
-import { StatusBar } from 'react-native';
-import { styles } from './styles';
-import UserInfoScreen from './UserInfoScreen';
+import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { saveOnBoardingData } from '../../services/WorkoutPlanService';
 import { baseURL } from '../../utils';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { styles } from './styles';
+import UserInfoScreen from './UserInfoScreen';
 
 const OnBoardingScreen = () => {
+  const data = null;
   const navigation = useNavigation();
   const navigationRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -38,15 +37,6 @@ const OnBoardingScreen = () => {
     gender: 'female',
   });
 
-  const getAuthToken = async () => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      return token;
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      return null;
-    }
-  };
   const MAX_WORKOUTS_SELECTIONS = 3;
 
   const checkQuestionnaireStatus = async () => {
@@ -108,8 +98,8 @@ const OnBoardingScreen = () => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const status = await checkQuestionnaireStatus();
-        setHasCompletedQuestionnaire(status.completed);
+        // const status = await checkQuestionnaireStatus();
+        // setHasCompletedQuestionnaire(status.completed);
       } catch (error) {
         console.error('Error checking questionnaire status:', error);
         setHasCompletedQuestionnaire(false);
@@ -284,12 +274,11 @@ const OnBoardingScreen = () => {
       safeNavigate('LoginScreen');
       return;
     }
-    if (currentStep === 8) {
+    if (currentStep === 7) {
       try {
         await saveOnBoardingData(userResponses);
-        //await saveOnBoardingDataToServer(userResponses);
         setHasCompletedQuestionnaire(true);
-        safeNavigate('SignUpScreen');
+        safeNavigate('LoginScreen');
       } catch (error) {
         Alert.alert('Error', 'Failed to save your preferences. Please try again');
         console.error('Error saving onboarding data', error);
