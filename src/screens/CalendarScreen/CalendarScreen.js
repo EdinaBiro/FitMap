@@ -1,27 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, Alert, ScrollView } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
-import moment, { duration } from 'moment';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import axios from 'axios';
-import auth from '@react-native-firebase/auth';
-import { baseURL } from '../../utils';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_API_KEY } from '@env';
-import { WEATHER_API } from '@env';
+import { GEMINI_API_KEY, WEATHER_API } from '@env';
 import { Ionicons } from '@expo/vector-icons';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import auth from '@react-native-firebase/auth';
+import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import moment from 'moment';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { baseURL } from '../../utils';
 
-import WorkoutAgenda from '../../components/CalendarComponents/WorkoutAgenda';
-import ProgressTracker from '../../components/CalendarComponents/ProgressTracker';
-import AgendaItem from '../../components/CalendarComponents/AgendaItem';
-import AddWorkoutModal from '../../components/CalendarComponents/WorkoutModals/AddWorkoutModal';
-import EditWorkoutModal from '../../components/CalendarComponents/WorkoutModals/EditWorkoutModal';
-import WorkoutWeatherForecast from '../../components/CalendarComponents/WeatherDisplay/WorkoutWeatherForecast';
 import { getCurrentPositionAsync } from 'expo-location';
+import AgendaItem from '../../components/CalendarComponents/AgendaItem';
+import ProgressTracker from '../../components/CalendarComponents/ProgressTracker';
+import WorkoutAgenda from '../../components/CalendarComponents/WorkoutAgenda';
+import AddWorkoutModal from '../../components/CalendarComponents/WorkoutModals/AddWorkoutModal';
 import CompleteWorkoutModal from '../../components/CalendarComponents/WorkoutModals/CompleteWorkoutModal';
-import { weeksToDays } from 'date-fns';
+import EditWorkoutModal from '../../components/CalendarComponents/WorkoutModals/EditWorkoutModal';
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
@@ -242,7 +239,7 @@ const CalendarScreen = () => {
           appid: WEATHER_API,
         },
       });
-      console.log(response)
+      console.log(response);
       console.log(
         'API forecast data available: ',
         response.data.list.slice(0, 3).map((item) => moment.unix(item.dt).format('YYYY-MM-DD HH:mm')),
@@ -587,9 +584,7 @@ const CalendarScreen = () => {
 
   const saveWorkoutPlan = async () => {
     try {
-      const validDate = moment(workoutPlan.date).isValid()
-        ? moment(workoutPlan.date).format('YYYY-MM-DD')
-        : moment().format('YYYY-MM-DD');
+      const validDate = selectedDate ? moment(selectedDate).format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
 
       const validTime =
         workoutPlan.time instanceof Date ? moment(workoutPlan.time).format('HH:mm:ss') : moment().format('HH:mm:ss');

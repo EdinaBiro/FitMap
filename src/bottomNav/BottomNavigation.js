@@ -1,15 +1,15 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import React, { useEffect, useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
+import { useEffect, useRef } from 'react';
+import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
-import HomeScreen from '../screens/HomeScreen/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
+import { Colors } from 'react-native/Libraries/NewAppScreen';
 import CalendarScreen from '../screens/CalendarScreen/CalendarScreen';
-import { Platform } from 'react-native';
-import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
+import HomeScreen from '../screens/HomeScreen/HomeScreen';
 import PersonalPlanScreen from '../screens/PersonalPlanScreen/PersonalPlanScreen';
+import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
+import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
+import PersonalPlanStack from '../screens/PersonalPlanScreen/PersonalPlanStack';
 
 const TabArray = [
   {
@@ -50,7 +50,7 @@ const TabArray = [
     type: 'Ionicons',
     activeIcon: 'rocket',
     inActiveIcon: 'rocket-outline',
-    component: PersonalPlanScreen,
+    component: PersonalPlanStack,
   },
 ];
 

@@ -1,47 +1,86 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { baseURL } from '../utils';
-import { getAuth } from 'firebase/auth';
+import { getAuthToken } from '../services/StatisticsService';
+import auth from '@react-native-firebase/auth';
 
-const getAuthToken = async () => {
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
+export let globalData = null;
+// const getAuthToken = async () => {
+//   try {
+//     const auth = getAuth();
+//     const user = auth.currentUser;
 
-    if (user) {
-      const idToken = await user.getIdToken(true);
-      return idToken;
-    }
+//     if (user) {
+//       const idToken = await user.getIdToken(true);
+//       return idToken;
+//     }
 
-    const storedToken = await AsyncStorage.getItem('userToken');
+//     const storedToken = await AsyncStorage.getItem('userToken');
 
-    if (storedToken) {
-      return storedToken;
-    }
+//     if (storedToken) {
+//       return storedToken;
+//     }
 
-    console.warn('No authentification token found');
-    return null;
-  } catch (error) {
-    console.error('Error getting auth token: ', error);
-    return null;
-  }
-};
+//     console.warn('No authentification token found');
+//     return null;
+//   } catch (error) {
+//     console.error('Error getting auth token: ', error);
+//     return null;
+//   }
+// };
 
 export const saveOnBoardingData = async (data) => {
   try {
-    const token = await getAuthToken();
-    if (!token) {
-      console.warn('No token found, saving onboarding data locally');
-      await AsyncStorage.setItem(
-        'pendingOnBoardingData',
-        JSON.stringify({
-          ...data,
-          timestamp: new Date().toISOString(),
-          needsSync: true,
-        }),
-      );
-      return { success: false, savedLocally: true, needsServerSync: true };
-    }
-    console.log('Token found, sending onboarding data to server: ', data);
+    const storageData = {
+      ...data,
+      timestamp: new Date().toISOString(),
+      needsSync: true,
+    };
+
+    await AsyncStorage.setItem('pendingOnBoardingData', JSON.stringify(storageData));
+    const check = AsyncStorage.getItem('pendingOnBoardingData');
+    console.log('I HAVE RUNED', check);
+    globalData = storageData;
+    return {
+      success: true,
+      savedLocally: true,
+      needsServerSync: true,
+    };
+  } catch (error) {
+    console.error('Error saving onboarding data:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+export const sendPendingOnBoardingData = async (token) => {
+  try {
+    const user = auth().currentUser;
+    if (!user) throw new Error('User not authenticated');
+
+    const storedData = await AsyncStorage.getItem('pendingOnBoardingData');
+    if (!storedData) return { success: false, message: 'No pending data' };
+
+    const parsed = JSON.parse(storedData);
+
+    // Transform to backend-expected format
+    const payload = {
+      fitnessLevel: Number(parsed.fitnessLevel),
+      fitnessGoal: parsed.fitnessGoal,
+      workoutFrequency: Number(parsed.workoutFrequency),
+      workoutDuration: Number(parsed.workoutDuration),
+      preferredWorkoutType: parsed.prefferedWorkoutType || parsed.preferredWorkoutType,
+      medicalConditions: Boolean(parsed.medicalConditions),
+      medicalDetails: parsed.medicalDetails || '',
+      age: parsed.age,
+      height: parsed.height,
+      weight: parsed.weight,
+      gender: parsed.gender,
+      userId: user.uid, // Always use current user's ID
+    };
+
+    console.log('Sending payload:', payload);
 
     const response = await fetch(`${baseURL}/plan/onboarding`, {
       method: 'POST',
@@ -49,43 +88,24 @@ export const saveOnBoardingData = async (data) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
 
-    console.log('Response status:', response.status);
+    const responseData = await response.json();
 
     if (!response.ok) {
-      const errorData = await response.json();
-      await AsyncStorage.setItem(
-        'pendingOnBoardingData',
-        JSON.stringify({
-          ...data,
-          timestamp: new Date().toISOString(),
-          needsSync: true,
-        }),
-      );
-      return { success: false, savedLocally: true, needsServerSync: true, error: errorData.detail };
+      throw new Error(responseData.detail || `HTTP ${response.status}`);
     }
 
     await AsyncStorage.removeItem('pendingOnBoardingData');
-    const result = await response.json();
-    return { success: true, savedLocally: true, needsServerSync: false, serverResponse: result };
+    return { success: true, data: responseData };
   } catch (error) {
-    console.error('Error saving onboarding data: ', error);
-    try {
-      await AsyncStorage.setItem(
-        'pendingOnBoardingData',
-        JSON.stringify({
-          ...data,
-          timestamp: new Date().toISOString(),
-          needsSync: true,
-        }),
-      );
-      return { success: false, savedLocally: true, needsServerSync: true, error: error.message };
-    } catch (storageError) {
-      console.error('DFailed to save locally: ', storageError);
-      throw new Error('Failed to save onboarding data both locally and on server');
-    }
+    console.error('Sync failed:', error.message);
+    return {
+      success: false,
+      error: error.message,
+      willRetry: true,
+    };
   }
 };
 

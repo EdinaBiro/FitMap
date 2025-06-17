@@ -1,13 +1,13 @@
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import BottomNavigation from '../bottomNav/BottomNavigation';
-import CustomDrawerContent from './CustomDrawerContent';
 import GymScreen from '../screens/GymScreen/GymScreen';
+import StatisticsScreen from '../screens/StatisticsScreen';
 import WorkoutDetailsScreen from '../screens/Workout/WorkoutDetailsScreen';
-import PersonalPlanScreen from '../screens/PersonalPlanScreen/PersonalPlanScreen';
-import HomeScreen from '../screens/HomeScreen/HomeScreen';
 import WorkoutStackNavigator from '../screens/Workout/WorkoutStackNavigator';
+import CustomDrawerContent from './CustomDrawerContent';
+import LoginScreen from '../screens/LoginScreen/LoginScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -61,6 +61,21 @@ const DrawerNavigation = () => {
       <Drawer.Screen
         name="WorkoutStackNavigator"
         component={WorkoutStackNavigator}
+        options={{ title: '', drawerItemStyle: { display: 'none' } }}
+      ></Drawer.Screen>
+
+      <Drawer.Screen
+        name="StatisticsScreen"
+        component={StatisticsScreen}
+        options={{
+          title: 'Statistics',
+          drawerIcon: ({ color, size }) => <Ionicons name="stats-chart" size={size} color={color} />,
+        }}
+      ></Drawer.Screen>
+
+      <Drawer.Screen
+        name="LoginScreen"
+        component={LoginScreen}
         options={{ title: '', drawerItemStyle: { display: 'none' } }}
       ></Drawer.Screen>
     </Drawer.Navigator>
