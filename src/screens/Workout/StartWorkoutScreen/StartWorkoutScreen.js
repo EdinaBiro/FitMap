@@ -181,7 +181,7 @@ const StartWorkoutScreen = () => {
 
       {
         enableHighAccuracy: true,
-        distanceFilter: 1,
+        distanceFilter: 5,
         interval: 1000,
         fastestInterval: 500,
       },

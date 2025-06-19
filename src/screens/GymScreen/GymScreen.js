@@ -181,8 +181,13 @@ const GymScreen = () => {
               <View style={styles.feedbackSection}>
                 <Text style={styles.feedbackTitle}>AI Feedback:</Text>
                 <Text style={styles.feedbackText}>
-                  {videoAnalysisResult.feedback || 'Great job! Keep up the good work.'}
+                  {videoAnalysisResult.ai_score || 'Great job! Keep up the good work.'}
                 </Text>
+                <Text>{videoAnalysisResult.ai_feedback || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_issues || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_positive_points || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_improvement_tips || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_motivation || 'Great job! Keep up the good work.'}</Text>
               </View>
 
               {videoAnalysisResult.improvement_tips && (
