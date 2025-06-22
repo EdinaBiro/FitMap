@@ -42,7 +42,6 @@ def add_workout(workout_data: WorkoutCreate, db: Session= Depends(get_db)):
 
 @router.get("/get_user_workout/{user_id}", response_model=List[WorkoutSchema])
 def get_user_workout(user_id: str, db: Session= Depends(get_db)):
-    # workouts = db.query(Workout).filter(Workout.user_id == user_id).all()
     workouts = db.query(Workout)\
             .filter(Workout.user_id == user_id)\
             .order_by(desc(Workout.workout_date))\

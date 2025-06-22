@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import auth from '@react-native-firebase/auth'; // or 'firebase/auth' for web
+import auth from '@react-native-firebase/auth';
 
 export const AuthContext = createContext();
 
@@ -8,12 +8,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(setUser);
-    return () => unsubscribe(); // Cleanup listener on unmount
+    return () => unsubscribe();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user }}>{children}</AuthContext.Provider>;
 };

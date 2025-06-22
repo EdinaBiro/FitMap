@@ -5,7 +5,6 @@ from db.database import Base
 class Profile(Base):
     __tablename__="profile"
 
-    #id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     age = Column(Integer,nullable=False)
     gender = Column(Text, nullable=False)
     height = Column(Float, nullable=False)

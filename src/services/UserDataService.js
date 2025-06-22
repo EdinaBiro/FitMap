@@ -5,17 +5,6 @@ import { baseURL } from '../utils';
 const ONBOARDING_DATA_KEY = 'fitmap_onboarding_data';
 const ONBOARDING_COMPLETED_KEY = 'fitmap_onboarding_completed';
 
-// export const saveOnBoardingData = async (userData) => {
-//     try{
-//         await AsyncStorage.setItem(ONBOARDING_DATA_KEY, JSON.stringify(userData));
-//         await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY,'true');
-//         return true;
-//     }catch(error) {
-//         console.error("Error saving onboarding data: ", error);
-//         return false;
-//     }
-// };
-
 export const getOnboardingData = async () => {
   try {
     const userData = await AsyncStorage.getItem(ONBOARDING_DATA_KEY);

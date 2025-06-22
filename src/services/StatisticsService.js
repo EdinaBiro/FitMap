@@ -11,7 +11,6 @@ export const getAuthToken = async () => {
 export const getWorkoutStats = async (timeRange = 'month') => {
   try {
     const token = await getAuthToken();
-    // console.log(token);
     if (!token) throw new Error('No authentication token');
 
     const response = await fetch(`${baseURL}/stats/workouts?range=${timeRange}`, {

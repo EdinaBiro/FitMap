@@ -19,7 +19,6 @@ const LoginScreen = () => {
 
   const navigation = useNavigation();
 
-  // Handle user state changes
   function onAuthStateChanged(user) {
     console.log(user, 'user');
     setUser(user);
@@ -37,7 +36,7 @@ const LoginScreen = () => {
 
   useEffect(() => {
     const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
-    return subscriber; // unsubscribe on unmount
+    return subscriber;
   }, []);
 
   function generateNonce(length) {
@@ -50,31 +49,21 @@ const LoginScreen = () => {
   }
 
   async function onFacebookButtonPressIOS() {
-    // Create a nonce and the corresponding
-    // sha256 hash of the nonce
     console.log('on facebook button ios');
     const nonce = generateNonce(16);
     const nonceSha256 = await sha256(nonce);
-    // Attempt login with permissions and limited login
     const result = await LoginManager.logInWithPermissions(['public_profile', 'email'], 'limited', nonceSha256);
 
     if (result.isCancelled) {
       throw 'User cancelled the login process';
     }
 
-    // Once signed in, get the users AuthenticationToken
     const data = await AuthenticationToken.getAuthenticationTokenIOS();
 
     if (!data) {
       throw 'Something went wrong obtaining authentication token';
     }
-
-    // Create a Firebase credential with the AuthenticationToken
-    // and the nonce (Firebase will validates the hash against the nonce)
     const facebookCredential = auth.FacebookAuthProvider.credential(data.authenticationToken, nonce);
-
-    // Sign-in the user with the credential
-    //return auth().signInWithCredential(facebookCredential);
     await auth().signInWithCredential(facebookCredential);
 
     if (auth().currentUser) {
@@ -141,7 +130,7 @@ const LoginScreen = () => {
 
   useEffect(() => {
     const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
-    return subscriber; // unsubscribe on unmount
+    return subscriber;
   }, []);
 
   const onGoogleButtonPress = async () => {
@@ -184,25 +173,18 @@ const LoginScreen = () => {
   };
 
   async function onFacebookButtonPressAndroid() {
-    // Attempt login with permissions
     const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
     if (result.isCancelled) {
       throw 'User cancelled the login process';
     }
-
-    // Once signed in, get the users AccessToken
     const data = await AccessToken.getCurrentAccessToken();
     if (!data) {
       throw 'Something went wrong obtaining access token';
     }
 
-    // Create a Firebase credential with the AccessToken
     const facebookCredential = auth.FacebookAuthProvider.credential(data.accessToken);
-    // Sign-in the user with the credential
-    //return auth().signInWithCredential(facebookCredential);
 
     await auth().signInWithCredential(facebookCredential);
-    //navigation.navigate('HomeScreen');
 
     if (auth().currentUser) {
       setTimeout(() => {

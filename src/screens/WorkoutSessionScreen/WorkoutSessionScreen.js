@@ -248,7 +248,6 @@ const WorkoutSessionScreen = () => {
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Stats Section */}
         <View style={styles.statsSection}>
           <StatCard icon="schedule" label="Duration" value={`${session.estimated_duration || 45}m`} color="#ff6b6b" />
           <StatCard icon="fitness-center" label="Exercises" value={session.exercises?.length || 0} color="#4ecdc4" />
@@ -256,22 +255,14 @@ const WorkoutSessionScreen = () => {
           <StatCard icon="trending-up" label="Total Sets" value={calculateTotalSets()} color="#66bb6a" />
         </View>
 
-        {/* Difficulty Progress */}
         <View style={styles.difficultySection}>
           <Text style={styles.sectionTitle}>Workout Intensity</Text>
           <ProgressBar progress={getDifficultyProgress()} color="#6200ee" />
         </View>
 
-        {/* Workout Visualization */}
         <View style={styles.visualSection}>
           <Text style={styles.sectionTitle}>Workout Overview</Text>
           <View style={styles.workoutVisual}>
-            {/* <LottieView
-              source={require('../../../assets/animations/workout_animation.json')}
-              autoPlay
-              loop
-              style={styles.workoutAnimation}
-            /> */}
             <View style={styles.workoutSummary}>
               <Text style={styles.summaryTitle}>Ready to crush this workout?</Text>
               <Text style={styles.summaryText}>
@@ -282,7 +273,6 @@ const WorkoutSessionScreen = () => {
           </View>
         </View>
 
-        {/* Exercises List */}
         <View style={styles.exercisesSection}>
           <Text style={styles.sectionTitle}>Exercises ({session.exercises?.length || 0})</Text>
           {session.exercises && session.exercises.length > 0 ? (
@@ -298,7 +288,6 @@ const WorkoutSessionScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Start Workout Button */}
       <View style={styles.startButtonContainer}>
         <TouchableOpacity style={styles.startButton} onPress={startWorkout} activeOpacity={0.8}>
           <LinearGradient

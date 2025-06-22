@@ -26,7 +26,6 @@ const App = () => {
   useEffect(() => {
     const chechFirstLaunch = async () => {
       try {
-        //await AsyncStorage.removeItem('alreadyLaunched');
         const value = await AsyncStorage.getItem('alreadyLaunched');
         if (value === null) {
           await AsyncStorage.setItem('alreadyLaunched', 'true');
@@ -50,8 +49,6 @@ const App = () => {
 
     return () => {
       authSubsrciber();
-      //   };
-      // },[]);
     };
   }, []);
 

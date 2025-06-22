@@ -38,19 +38,6 @@ DEEPSEEK_API_KEY = "sk-cdb1c896d17e4a28bfb18497e0fe623a"
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
-# def calculate_angle(a,b,c):
-#     a = np.array(a)
-#     b = np.array(b)
-#     c = np.array(c)
-
-#     radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
-#     angle = np.abs(radians*180.0/np.pi)
-
-#     if angle > 180.0:
-#         angle = 360 - angle
-    
-#     return angle
-
 def calculate_angle(a, b, c):
     """
     Calculate angle between three points
@@ -190,9 +177,6 @@ def extract_keypoints(landmarks):
     }
 
 def detect_exercise_type(landmarks):
-    """
-    Improved exercise detection with better heuristics for bicep curl, pushup, squat, and shoulder press
-    """
     def get_coords(landmark_name):
         lm = landmarks[mp_pose.PoseLandmark[landmark_name].value]
         return [lm.x, lm.y]
@@ -343,55 +327,6 @@ def detect_exercise_type(landmarks):
         return "bicep_curl"
     
     return "unknown"
-
-# def detect_exercise_type(landmarks):
-#     def get_coords(landmark_name):
-#         lm = landmarks[mp_pose.PoseLandmark[landmark_name].value]
-#         return [lm.x, lm.y]
-
-#     # Get key joint coordinates
-#     left_shoulder = get_coords('LEFT_SHOULDER')
-#     right_shoulder = get_coords('RIGHT_SHOULDER')
-#     left_elbow = get_coords('LEFT_ELBOW')
-#     right_elbow = get_coords('RIGHT_ELBOW')
-#     left_wrist = get_coords('LEFT_WRIST')
-#     right_wrist = get_coords('RIGHT_WRIST')
-#     left_hip = get_coords('LEFT_HIP')
-#     right_hip = get_coords('RIGHT_HIP')
-#     left_knee = get_coords('LEFT_KNEE')
-#     right_knee = get_coords('RIGHT_KNEE')
-#     left_ankle = get_coords('LEFT_ANKLE')
-#     right_ankle = get_coords('RIGHT_ANKLE')
-
-#     # Calculate angles
-#     left_elbow_angle = calculate_angle(left_shoulder, left_elbow, left_wrist)
-#     right_elbow_angle = calculate_angle(right_shoulder, right_elbow, right_wrist)
-#     left_knee_angle = calculate_angle(left_hip, left_knee, left_ankle)
-#     right_knee_angle = calculate_angle(right_hip, right_knee, right_ankle)
-
-#     # Heuristics
-#     is_left_curl = left_elbow_angle < 60 and left_wrist[1] < left_elbow[1] < left_shoulder[1]
-#     is_right_curl = right_elbow_angle < 60 and right_wrist[1] < right_elbow[1] < right_shoulder[1]
-
-#     is_squat = (
-#         left_knee_angle < 100 and right_knee_angle < 100 and
-#         left_knee[1] > left_hip[1] and right_knee[1] > right_hip[1]
-#     )
-
-#     is_pushup = (
-#         left_elbow_angle < 100 and right_elbow_angle < 100 and
-#         left_shoulder[1] < left_elbow[1] < left_wrist[1]
-#     )
-
-#     # Decision tree
-#     if is_left_curl or is_right_curl:
-#         return "bicep_curl"
-#     elif is_squat:
-#         return "squat"
-#     elif is_pushup:
-#         return "pushup"
-#     else:
-#         return "unknown"
 
 
     
@@ -727,8 +662,6 @@ def summarize_pose_data(landmarks_sequence, exercise_type):
 
 
 def generate_ai_feedback(exercise_type, landmarks_sequence, rep_analysis):
-    """Generate friendly fitness feedback using AI with emojis and natural language"""
-    
     if not DEEPSEEK_API_KEY:
         print("⚠️ Warning: API key not set - cannot provide AI feedback")
         return {
@@ -852,13 +785,9 @@ def generate_ai_feedback(exercise_type, landmarks_sequence, rep_analysis):
         }
 
 def process_video_with_mediapipe(video_path, exercise_type):
-    """Process video with MediaPipe and analyze exercise"""
     cap = cv2.VideoCapture(video_path)
     all_landmarks = []
     frame_count = 0
-    
-    print(f"Processing video: {video_path}")
-    print(f"Exercise type: {exercise_type}")
     
     while cap.isOpened():
         ret, frame = cap.read()
@@ -873,8 +802,6 @@ def process_video_with_mediapipe(video_path, exercise_type):
                 all_landmarks.append(landmarks)
     
     cap.release()
-    
-    print(f"Processed {frame_count} frames, extracted {len(all_landmarks)} landmark sets")
     
     if not all_landmarks:
         return {
@@ -978,64 +905,6 @@ def analyze_pose():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-# @app.route('/analyze-video', methods=['POST'])
-# def analyze_video():
-#     if 'video' not in request.files:
-#         return jsonify({"error": "No file part"}), 400
-
-#     file = request.files['video']
-#     if file.filename == '':
-#         return jsonify({"error": "No selected file"}), 400
-
-#     if file and allowed_file(file.filename):
-#         filename = secure_filename(file.filename)
-#         filepath = os.path.join(UPLOAD_FOLDER, filename)
-#         file.save(filepath)
-
-#         cap = cv2.VideoCapture(filepath)
-#         frame_count = 0
-#         landmark_sequence = []
-
-#         while cap.isOpened():
-#             ret, frame = cap.read()
-#             if not ret:
-#                 break
-#             frame_count += 1
-#             if frame_count % 5 != 0:
-#                 continue
-
-#             image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#             result = pose.process(image_rgb)
-
-#             if result.pose_landmarks:
-#                 landmarks = []
-#                 for lm in result.pose_landmarks.landmark:
-#                     landmarks.append({
-#                         'x': lm.x,
-#                         'y': lm.y,
-#                         'z': lm.z,
-#                         'visibility': lm.visibility
-#                     })
-#                 landmark_sequence.append(landmarks)
-
-#         cap.release()
-#         os.remove(filepath)
-
-#         if not landmark_sequence:
-#             return jsonify({"error": "No poses detected in video"}), 400
-
-#         exercise_type = detect_exercise_type(result.pose_landmarks.landmark)
-#         analysis = analyze_rep_movement(landmark_sequence, exercise_type)
-#         return jsonify({
-#             "exercise": exercise_type,
-#             "correct_reps": analysis.get("correct_reps", 0),
-#             "incorrect_reps": analysis.get("incorrect_reps", 0),
-#             "reps": analysis.get("correct_reps", 0) + analysis.get("incorrect_reps", 0) ,
-#         })
-      
-
-#     return jsonify({"error": "File type not allowed"}), 400
 
 @app.route('/analyze-video', methods=['POST'])
 def analyze_video():
