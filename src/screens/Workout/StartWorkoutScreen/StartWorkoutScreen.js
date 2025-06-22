@@ -181,7 +181,7 @@ const StartWorkoutScreen = () => {
 
       {
         enableHighAccuracy: true,
-        distanceFilter: 1,
+        distanceFilter: 5,
         interval: 1000,
         fastestInterval: 500,
       },
@@ -271,7 +271,7 @@ const StartWorkoutScreen = () => {
     const { latitude: lat1, longitude: lon1 } = startCoords;
     const { latitude: lat2, longitude: lon2 } = endCoords;
 
-    const R = 6371e3; // metres
+    const R = 6371e3;
     const φ1 = (lat1 * Math.PI) / 180;
     const φ2 = (lat2 * Math.PI) / 180;
     const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -280,8 +280,8 @@ const StartWorkoutScreen = () => {
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    const distance = R * c; // in metres
-    return distance / 1000; // in kilometers
+    const distance = R * c;
+    return distance / 1000;
   };
 
   const calculatePace = (distance, currentDuration) => {
@@ -289,14 +289,12 @@ const StartWorkoutScreen = () => {
 
     const paceValue = currentDuration / 60 / distance;
 
-    return isNaN(paceValue) ? '0.00' : paceValue.toFixed(2);
+    return isNaN(paceValue) ? 0 : parseFloat(paceValue.toFixed(2));
   };
 
-  const calculateCalories = (distance, duration, userId, userProfiles) => {
-    //const userProfile = userProfiles.find(profile => profile.user_id === userId);
-
+  const calculateCalories = (distance) => {
     if (!userProfile || isNaN(distance) || distance <= 0) {
-      return '0.00';
+      return 0;
     }
 
     const { age, gender, weight, height, activity_level } = userProfile;
@@ -308,9 +306,9 @@ const StartWorkoutScreen = () => {
 
     let bmr;
     if (userGender.toLowerCase() === 'male') {
-      bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge + 5;
+      bmr = 10 * userWeight + 6.25 * userHeight - 5 * userAge + 5;
     } else {
-      bmr = 10 * userWeight + 6.25 * userWeight - 5 * userAge - 161;
+      bmr = 10 * userWeight + 6.25 * userHeight - 5 * userAge - 161;
     }
 
     const caloriesPerMinRest = bmr / 1440;

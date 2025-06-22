@@ -21,7 +21,7 @@ const WorkoutWeatherForecast = ({ weatherData, selectedHour, onHourSelect }) => 
 
   if (!weatherData || !weatherData.hourly) {
     return (
-      <View style={styles.weatherContainer}>
+      <View style={styles.weatherErrorContainer}>
         <Ionicons name="cloud-outline" size={40} color="#6200ee" />
         <Text style={styles.weatherText}>Weather forecast unavailable</Text>
       </View>

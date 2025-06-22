@@ -138,7 +138,6 @@ async def get_workout_stats(
         )
     
 def generate_workout_frequency(workouts, time_range, start_date, end_date):
-    """Generate workout frequency data for charts"""
     frequency_data = defaultdict(int)
     
     if time_range == 'week':
@@ -181,7 +180,6 @@ def generate_workout_frequency(workouts, time_range, start_date, end_date):
     return {"labels": labels, "data": data}
 
 def generate_workout_types(workouts):
-    """Generate workout types distribution for pie chart"""
     type_counts = defaultdict(int)
     colors = ['#6200ee', '#03dac6', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b']
     
@@ -202,7 +200,6 @@ def generate_workout_types(workouts):
     return workout_types
 
 def generate_calories_over_time(workouts, time_range):
-    """Generate calories burned over time for line chart"""
     calories_data = defaultdict(int)
     
     for workout in workouts:

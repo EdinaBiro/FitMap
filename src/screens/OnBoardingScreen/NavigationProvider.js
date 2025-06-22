@@ -20,7 +20,6 @@ const Stack = createNativeStackNavigator();
 
 const NavigationProvider = () => {
   return (
-    //    <NavigationContainer>
     <Stack.Navigator
       initialRouteName="OnBoardingScreen"
       screenOptions={{
@@ -43,7 +42,6 @@ const NavigationProvider = () => {
       <Stack.Screen name="GymScreen" component={GymScreen} />
       <Stack.Screen name="PersonalPlanScreen" component={PersonalPlanScreen} />
     </Stack.Navigator>
-    //    </NavigationContainer>
   );
 };
 

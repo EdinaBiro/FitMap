@@ -98,8 +98,6 @@ const OnBoardingScreen = () => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        // const status = await checkQuestionnaireStatus();
-        // setHasCompletedQuestionnaire(status.completed);
       } catch (error) {
         console.error('Error checking questionnaire status:', error);
         setHasCompletedQuestionnaire(false);

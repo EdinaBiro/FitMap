@@ -33,10 +33,6 @@ const GymScreen = () => {
 
   const navigation = useNavigation();
 
-  useEffect(() => {
-    // Cleanup effect if needed
-  }, []);
-
   const pickVideo = async () => {
     try {
       setUploadStatus('Selecting video...');
@@ -50,10 +46,7 @@ const GymScreen = () => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const video = result.assets[0];
         console.log('Selected video:', video);
-
-        // Validate video file
         if (video.size && video.size > 100 * 1024 * 1024) {
-          // 100MB limit
           Alert.alert('File Too Large', 'Please select a video smaller than 100MB');
           setUploadStatus('');
           return;
@@ -63,8 +56,6 @@ const GymScreen = () => {
         setSelectedVideo(video);
         setUploadStatus(`Selected: ${video.name}`);
         setPostureFeedback(`Video selected: ${video.name}`);
-
-        // Automatically analyze the selected video
         await uploadAndAnalyzeVideo(video.uri);
       } else {
         setUploadStatus('');
@@ -93,33 +84,23 @@ const GymScreen = () => {
       formData.append('exercise', 'bicep_curl');
 
       console.log('Uploading video to backend:', uri);
-
-      // 1. First get the raw response
       const rawResponse = await fetch(`${poseAPI}/analyze-video`, {
         method: 'POST',
         body: formData,
       });
-
-      // 2. Check for HTTP errors first
       if (!rawResponse.ok) {
         const errorText = await rawResponse.text();
         throw new Error(`HTTP ${rawResponse.status}: ${errorText}`);
       }
-
-      // 3. Parse the JSON only after verifying HTTP status
       const result = await rawResponse.json();
       console.log('RAW BACKEND RESPONSE:', result);
-
-      // 4. Verify the structure you expect
       if (!result || typeof result !== 'object') {
         throw new Error('Invalid response format from server');
       }
 
-      // 5. Update state with the actual values from backend
       setVideoAnalysisResult(result);
       setShowResults(true);
 
-      // 6. Use the counts DIRECTLY from backend (no addition)
       setCorrectReps(result.correct_reps ?? 0);
       setIncorrectReps(result.incorrect_reps ?? 0);
 
@@ -181,8 +162,13 @@ const GymScreen = () => {
               <View style={styles.feedbackSection}>
                 <Text style={styles.feedbackTitle}>AI Feedback:</Text>
                 <Text style={styles.feedbackText}>
-                  {videoAnalysisResult.feedback || 'Great job! Keep up the good work.'}
+                  {videoAnalysisResult.ai_score || 'Great job! Keep up the good work.'}
                 </Text>
+                <Text>{videoAnalysisResult.ai_feedback || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_issues || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_positive_points || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_improvement_tips || 'Great job! Keep up the good work.'}</Text>
+                <Text>{videoAnalysisResult.ai_motivation || 'Great job! Keep up the good work.'}</Text>
               </View>
 
               {videoAnalysisResult.improvement_tips && (

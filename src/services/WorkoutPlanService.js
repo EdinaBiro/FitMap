@@ -4,29 +4,6 @@ import { getAuthToken } from '../services/StatisticsService';
 import auth from '@react-native-firebase/auth';
 
 export let globalData = null;
-// const getAuthToken = async () => {
-//   try {
-//     const auth = getAuth();
-//     const user = auth.currentUser;
-
-//     if (user) {
-//       const idToken = await user.getIdToken(true);
-//       return idToken;
-//     }
-
-//     const storedToken = await AsyncStorage.getItem('userToken');
-
-//     if (storedToken) {
-//       return storedToken;
-//     }
-
-//     console.warn('No authentification token found');
-//     return null;
-//   } catch (error) {
-//     console.error('Error getting auth token: ', error);
-//     return null;
-//   }
-// };
 
 export const saveOnBoardingData = async (data) => {
   try {
@@ -64,7 +41,6 @@ export const sendPendingOnBoardingData = async (token) => {
 
     const parsed = JSON.parse(storedData);
 
-    // Transform to backend-expected format
     const payload = {
       fitnessLevel: Number(parsed.fitnessLevel),
       fitnessGoal: parsed.fitnessGoal,
@@ -77,7 +53,7 @@ export const sendPendingOnBoardingData = async (token) => {
       height: parsed.height,
       weight: parsed.weight,
       gender: parsed.gender,
-      userId: user.uid, // Always use current user's ID
+      userId: user.uid,
     };
 
     console.log('Sending payload:', payload);

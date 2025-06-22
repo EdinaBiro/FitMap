@@ -230,7 +230,6 @@ const CalendarScreen = () => {
     console.log('target date for weather: ', targetDate);
 
     try {
-      //const response = await axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${userLocation.latitude}&lon=${userLocation.longitude}&units=metric&appid=${WEATHER_API}`);
       const response = await axios.get(`https://api.openweathermap.org/data/2.5/forecast`, {
         params: {
           lat: latitude,
@@ -477,7 +476,7 @@ const CalendarScreen = () => {
             style: 'destructive',
             onPress: () => {
               closeSwipeable?.();
-              console.log('Deleting workout with ID:', workout.id); // Verify correct ID
+              console.log('Deleting workout with ID:', workout.id);
               deleteWorkout(workout);
             },
           },
@@ -804,11 +803,9 @@ const CalendarScreen = () => {
 
       if (imageNumber === 1) {
         setImage1(result.assets[0].uri);
-        //setShowDatePicker1(true);
         setUploadDate1(currentTime);
       } else {
         setImage2(result.assets[0].uri);
-        //setShowDatePicker2(true);
         setUploadDate2(currentTime);
       }
     }
